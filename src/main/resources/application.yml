@@ -1,0 +1,52 @@
+server:
+  port: '8080'
+spring:
+  application:
+    name: processor
+  data:
+    mongodb:
+      database: svm
+      uri: mongodb+srv://admin:admin%40123@aruncluster.70orz.mongodb.net/?retryWrites=true&w=majority
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  #    default-property-inclusion: always, non_null, non_absent, non_default, non_empty
+
+  cloud:
+    stream:
+      function:
+        bindings:
+          processor-in-0: event-processor
+          measure-in-0: step-event-processor
+        definition: processor;measure
+      bindings:
+        event-processor:
+          group: processor.group.0
+          destination: order-event-topic
+        step-event-processor:
+          group: step.group.0
+          destination: step-instance-out-0
+      source: process-instance;step-instance;measurement-instance
+      kafka:
+        bindings:
+          measurement-instance-out-0:
+            producer:
+              configuration:
+                "[key.serializer]": org.apache.kafka.common.serialization.StringSerializer
+          process-instance-out-0:
+            producer:
+              configuration:
+                "[key.serializer]": org.apache.kafka.common.serialization.StringSerializer
+          step-instance-out-0:
+            producer:
+              configuration:
+                "[key.serializer]": org.apache.kafka.common.serialization.StringSerializer
+          step-event-processor:
+            consumer:
+              enableDlq: true
+              dlqName: input-topic-dlq
+
+logging:
+  level:
+    com.aktimetrix: DEBUG
+
