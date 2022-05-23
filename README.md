@@ -71,6 +71,7 @@ logging.level.com.aktimetrix=DEBUG
 ```
 In the above configuration replace the MONGODB_URI with the mongo db uri where it is running.
 And if Kafka message broker is running on you local machine (`localhost:9092`), you can remove the #message broker configuration from the above file.
+
 3. Add the aktimetrix core package ( `"com.aktimetrix.core"`) to application component scan as shown below.
 Final Application file looks like below. 
 ```java
