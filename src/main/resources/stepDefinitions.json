@@ -1,0 +1,89 @@
+[{
+  "_id": {
+    "$oid": "628a4da21ef78f21e4f9f265"
+  },
+  "categoryCode": "ORDER",
+  "endEventCodes": [],
+  "functionalCtxCode": null,
+  "optionalInd": "N",
+  "responsiblePartyCode": null,
+  "startEventCodes": [
+    "ORDER_PLACED_EVENT"
+  ],
+  "status": "CONFIRMED",
+  "stepCode": "PLACE",
+  "stepName": "Order Placed Step",
+  "subCategoryCode": "DELIVERY",
+  "tenant": "AA",
+  "locationCtxCode": null,
+  "measurements": [
+    {
+      "measurementCode": "PCS",
+      "type": "P"
+    },
+    {
+      "measurementCode": "TIME",
+      "type": "P"
+    }
+  ]
+},{
+  "_id": {
+    "$oid": "628a4e901ef78f21e4f9f266"
+  },
+  "categoryCode": "ORDER",
+  "endEventCodes": [],
+  "functionalCtxCode": null,
+  "optionalInd": "N",
+  "responsiblePartyCode": null,
+  "startEventCodes": [
+    "ORDER_SHIPPED_EVENT"
+  ],
+  "status": "CONFIRMED",
+  "stepCode": "SHIP",
+  "stepName": "Order Shipped Step",
+  "subCategoryCode": "DELIVERY",
+  "tenant": "AA",
+  "locationCtxCode": null,
+  "measurements": [
+    {
+      "measurementCode": "PCS",
+      "type": "P"
+    },
+    {
+      "measurementCode": "TIME",
+      "type": "P"
+    }
+  ]
+},{
+  "_id": {
+    "$oid": "628a51001ef78f21e4f9f267"
+  },
+  "categoryCode": "ORDER",
+  "endEventCodes": [],
+  "functionalCtxCode": null,
+  "optionalInd": "N",
+  "responsiblePartyCode": null,
+  "startEventCodes": [
+    "ORDER_DELIVERED_EVENT"
+  ],
+  "status": "CONFIRMED",
+  "stepCode": "DELIVER",
+  "stepName": "Order Delivery Step",
+  "subCategoryCode": "DELIVERY",
+  "tenant": "AA",
+  "locationCtxCode": null,
+  "measurements": [
+    {
+      "measurementCode": "PCS",
+      "type": "P"
+    },
+    {
+      "measurementCode": "TIME",
+      "type": "P"
+    },
+    {
+      "measurementCode": "RATING",
+      "type": "P"
+    }
+  ]
+}]

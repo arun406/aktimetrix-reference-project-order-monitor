@@ -1,0 +1,37 @@
+[{
+  "_id": {
+    "$oid": "61cc7a4678045a7a9babc02c"
+  },
+  "tenant": "XX",
+  "code": "PCS",
+  "name": "Pieces",
+  "unitCode": "N",
+  "_class": "com.accelya.products.svm.core.referencedata.model.MeasurementTypeDefinition"
+},{
+  "_id": {
+    "$oid": "61cc7aae78045a7a9babc02d"
+  },
+  "tenant": "XX",
+  "code": "WT",
+  "name": "Weight",
+  "unitCode": "K",
+  "_class": "com.accelya.products.svm.core.referencedata.model.MeasurementTypeDefinition"
+},{
+  "_id": {
+    "$oid": "61cc7aba78045a7a9babc02e"
+  },
+  "tenant": "XX",
+  "code": "VOL",
+  "name": "Volume",
+  "unitCode": "CM",
+  "_class": "com.accelya.products.svm.core.referencedata.model.MeasurementTypeDefinition"
+},{
+  "_id": {
+    "$oid": "61cc7ad678045a7a9babc02f"
+  },
+  "tenant": "XX",
+  "code": "TIME",
+  "name": "Time",
+  "unitCode": "TIMESTAMP",
+  "_class": "com.accelya.products.svm.core.referencedata.model.MeasurementTypeDefinition"
+}]

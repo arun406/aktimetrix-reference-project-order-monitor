@@ -22,7 +22,6 @@ public class OrderDeliveredPlanTimeMeter extends AbstractMeter {
     protected String getMeasurementValue(String tenant, StepInstance step) {
         String orderedOn = (String) step.getMetadata().get("orderedOn");
         LocalDateTime time = LocalDateTime.parse(orderedOn, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-
         return String.valueOf(time.plus(10, ChronoUnit.HOURS));
     }
 }
