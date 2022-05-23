@@ -1,0 +1,43 @@
+[{
+  "_id": {
+    "$oid": "628a52141ef78f21e4f9f26e"
+  },
+  "contentTypes": [
+    "application/json",
+    "application/xml"
+  ],
+  "eventCode": "ORDER_DELIVERED_EVENT",
+  "eventDescription": "Order Delivered Event",
+  "eventName": "Order Delivered Event",
+  "eventSource": "AA",
+  "eventType": "ORDER_EVENT",
+  "tenant": "AA"
+},{
+  "_id": {
+    "$oid": "628a51e01ef78f21e4f9f26c"
+  },
+  "contentTypes": [
+    "application/json",
+    "application/xml"
+  ],
+  "eventCode": "ORDER_PLACED_EVENT",
+  "eventDescription": "Order Placed Event",
+  "eventName": "Order Placed Event",
+  "eventSource": "AA",
+  "eventType": "ORDER_EVENT",
+  "tenant": "AA"
+},{
+  "_id": {
+    "$oid": "628a520a1ef78f21e4f9f26d"
+  },
+  "contentTypes": [
+    "application/json",
+    "application/xml"
+  ],
+  "eventCode": "ORDER_SHIPPED_EVENT",
+  "eventDescription": "Order Shipped Event",
+  "eventName": "Order Shipped Event",
+  "eventSource": "AA",
+  "eventType": "ORDER_EVENT",
+  "tenant": "AA"
+}]

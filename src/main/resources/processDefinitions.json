@@ -1,0 +1,35 @@
+[{
+  "_id": {
+    "$oid": "628a4c3c1ef78f21e4f9f25e"
+  },
+  "categoryCode": "ORDER",
+  "endEventCodes": [
+    "DLV"
+  ],
+  "processCode": "ORDER_DELIVERY",
+  "processDescription": null,
+  "processName": "Order Delivery process",
+  "responsiblePartyCode": "A",
+  "startEventCodes": [
+    "ORDER_PLACED_EVENT"
+  ],
+  "status": "CONFIRMED",
+  "steps": [
+    {
+      "stepCode": "PLACE"
+    },
+    {
+      "stepCode": "SHIP"
+    },
+    {
+      "stepCode": "DELIVER"
+    }
+  ],
+  "subCategoryCode": "DELIVERY",
+  "tags": [
+    "ORDER",
+    "DELIVERY"
+  ],
+  "tenant": "AA",
+  "entityType": "com.ecom.order"
+}]
