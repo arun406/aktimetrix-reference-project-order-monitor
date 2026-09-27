@@ -69,8 +69,24 @@ spring.cloud.stream.kafka.bindings.step-event-processor.consumer.enableDlq=true
 spring.cloud.stream.kafka.bindings.step-event-processor.consumer.dlqName=input-topic-dlq
 logging.level.com.aktimetrix=DEBUG
 ```
-In the above configuration replace the MONGODB_URI with the mongo db uri where it is running.
-And if Kafka message broker is running on you local machine (`localhost:9092`), you can remove the #message broker configuration from the above file.
+This project reads its connection settings from environment variables, so no credentials are committed (see [`.env.example`](./.env.example)):
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `MONGODB_URI` | `mongodb://localhost:27017/svm` | MongoDB connection string |
+| `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Kafka bootstrap servers |
+| `SPRING_PROFILES_ACTIVE` | — | Set to `confluent` to connect to Confluent Cloud over SASL_SSL |
+| `KAFKA_API_KEY` / `KAFKA_API_SECRET` | — | Confluent Cloud API key and secret (only with the `confluent` profile) |
+
+With a local MongoDB and Kafka broker no variables are needed. For Confluent Cloud:
+
+```bash
+export MONGODB_URI='mongodb+srv://<user>:<password>@<cluster>/svm'
+export KAFKA_BOOTSTRAP_SERVERS='<broker-endpoint>:9092'
+export SPRING_PROFILES_ACTIVE=confluent
+export KAFKA_API_KEY='<api-key>'
+export KAFKA_API_SECRET='<api-secret>'
+```
 
 3. Add the aktimetrix core package ( `"com.aktimetrix.core"`) to application component scan as shown below.
 Final Application file looks like below. 
