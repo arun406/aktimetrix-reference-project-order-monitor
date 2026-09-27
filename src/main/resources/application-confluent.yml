@@ -1,0 +1,11 @@
+# Confluent Cloud (SASL_SSL) connection. Activate with SPRING_PROFILES_ACTIVE=confluent.
+# Credentials come from the environment and are never committed; see .env.example.
+spring:
+  kafka:
+    properties:
+      security:
+        protocol: SASL_SSL
+      sasl:
+        mechanism: PLAIN
+        jaas:
+          config: org.apache.kafka.common.security.plain.PlainLoginModule required username='${KAFKA_API_KEY}' password='${KAFKA_API_SECRET}';

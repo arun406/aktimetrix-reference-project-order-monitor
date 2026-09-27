@@ -4,26 +4,20 @@ spring:
   data:
     mongodb:
       database: svm
-      uri: mongodb+srv://admin:admin%40123@aruncluster.70orz.mongodb.net/?retryWrites=true&w=majority
+      uri: ${MONGODB_URI:mongodb://localhost:27017/svm}
   jackson:
     serialization:
       write-dates-as-timestamps: false
   #    default-property-inclusion: always, non_null, non_absent, non_default, non_empty
-  # Required connection configs for Kafka producer, consumer, and admin
+  # Kafka connection. Defaults to a local broker; activate the "confluent" profile
+  # (application-confluent.yml) to connect to Confluent Cloud with SASL credentials.
   kafka:
     properties:
-      sasl:
-        jaas:
-          config: org.apache.kafka.common.security.plain.PlainLoginModule   required
-            username='7I2IL2UTBVQG4MN7'   password='xdCW7HbRg0JEOOsSJMm/ljYy08JebRYTCrx9E2BfMv6XnFRw7GNTZIAE5B3uBbsA';
-        mechanism: PLAIN
       session:
         timeout:
           ms: '45000'
-      security:
-        protocol: SASL_SSL
       bootstrap:
-        servers: pkc-l7pr2.ap-south-1.aws.confluent.cloud:9092
+        servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
   cloud:
     stream:
