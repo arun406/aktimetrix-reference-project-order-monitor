@@ -16,6 +16,7 @@
     <properties>
         <java.version>18</java.version>
         <spring-cloud.version>2021.0.3-SNAPSHOT</spring-cloud.version>
+        <lombok.version>1.18.34</lombok.version>
     </properties>
     <dependencies>
             <dependency>
