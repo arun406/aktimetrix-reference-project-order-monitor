@@ -6,15 +6,18 @@ import lombok.Data;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
+/**
+ * The entity of an ORDER_PLACED_EVENT.
+ */
 @Data
 public class Order implements Serializable {
-    String orderId;
+    private String orderId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime orderedOn;
-    String customerId;
-    double orderTotal;
-    String orderCurrency;
-    String productId;
-    int quantity;
-    String shippingAddress;
+    private LocalDateTime orderedOn;
+    private String customerId;
+    private double orderTotal;
+    private String orderCurrency;
+    private String productId;
+    private int quantity;
+    private String shippingAddress;
 }

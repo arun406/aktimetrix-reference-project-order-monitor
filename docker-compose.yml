@@ -1,0 +1,10 @@
+# Local Kafka and MongoDB for the order monitor: docker compose up -d
+services:
+  kafka:
+    image: apache/kafka:3.7.0      # single-node KRaft broker on localhost:9092
+    ports:
+      - "9092:9092"
+  mongo:
+    image: mongo:6
+    ports:
+      - "27017:27017"

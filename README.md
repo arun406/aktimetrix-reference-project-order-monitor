@@ -1,285 +1,138 @@
-﻿To manually initialize the project:
+# Order Monitor: an Aktimetrix reference project
 
-Navigate to https://start.spring.io. This service pulls in all the dependencies you need for an application and does most of the setup for you.
+A complete, runnable example of [Aktimetrix](https://github.com/arun406/aktimetrix): it monitors the delivery of
+e-commerce orders and tells you, for every order, whether each milestone happened **on time**, **late**, or is
+**overdue**.
 
-Choose either Gradle or Maven and the language you want to use. This guide assumes that you chose Java.
+<p align="center">
+  <img src="https://raw.githubusercontent.com/arun406/aktimetrix/main/img/order-timeline.svg" alt="Planned and actual timeline of order 1234" width="100%">
+</p>
 
-Click Dependencies and add the following dependencies
-1. Spring Web.
-2. Lombok
-3. Cloud stream
-4. Spring Data MongoDB
-5. Spring for Apache Kafka
-6. Spring for Apache Kafka Streams
+The business rule it monitors: an order is **placed**, should **ship within 2 hours**, and should be **delivered
+within 10 hours**.
 
-Add the following details in Project Metadata.
-1. Group name as `com.aktimetrix`
-2. Artifact as `order-process-monitor`
-3. Name as `Reference project for Aktimetrix`
-4. Package name as `com.aktimetrix.orderprocessmonitor`
+## What's in it
 
-Click Generate.
+The whole application is some JSON, one process handler and two meters. Everything else comes from the framework.
 
-Download the resulting ZIP file, which is an archive of a web application that is configured with your choices.
+| File | Purpose |
+|---|---|
+| [`aktimetrix/process-definitions.json`](src/main/resources/aktimetrix/process-definitions.json) | The `ORDER_DELIVERY` process: started by `ORDER_PLACED_EVENT`, with steps `PLACE` → `SHIP` → `DELIVER`. |
+| [`aktimetrix/step-definitions.json`](src/main/resources/aktimetrix/step-definitions.json) | Each step: the event that completes it, and whether it has a planned `TIME`. |
+| [`OrderProcessor`](src/main/java/com/aktimetrix/orderprocessmonitor/processhandler/OrderProcessor.java) | Decides what to remember about an order: the steps keep `orderedOn` for the meters. |
+| [`OrderShippedPlanTimeMeter`](src/main/java/com/aktimetrix/orderprocessmonitor/meter/OrderShippedPlanTimeMeter.java) | Plans `SHIP` at *ordered + 2 h*. |
+| [`OrderDeliveredPlanTimeMeter`](src/main/java/com/aktimetrix/orderprocessmonitor/meter/OrderDeliveredPlanTimeMeter.java) | Plans `DELIVER` at *ordered + 10 h*. |
+| [`application.yml`](src/main/resources/application.yml) | MongoDB, Kafka, and the inbound topic `order-events`. |
+| [`eventhandler/`](src/main/java/com/aktimetrix/orderprocessmonitor/eventhandler) | *Optional.* Takes each step's actual time from the order (`orderedOn`, `shippedAt`, `deliveredAt`) instead of the event envelope. Without them, Aktimetrix handles every event itself. |
+| [`events/`](events) | Sample events for order `1234`. |
+| [`OrderMonitorEndToEndTest`](src/test/java/com/aktimetrix/orderprocessmonitor/OrderMonitorEndToEndTest.java) | The whole story below, as a test. |
 
-Extract the ZIP file and import the project in your favourate IDE.
+The definitions are loaded from the classpath at startup, so there is no data to import by hand.
 
+## Run it
 
-Note: You can also fork the project from Github and open it in your IDE or other editor.
+You need **JDK 11+** and **Docker**.
 
-1. Adding the Aktimetrix core dependency.
+```bash
+# 1. Build the framework (it is not on Maven Central yet)
+git clone https://github.com/arun406/aktimetrix.git
+(cd aktimetrix && ./mvnw install -DskipTests)
 
+# 2. Start Kafka and MongoDB, then the monitor
+git clone https://github.com/arun406/aktimetrix-reference-project-order-monitor.git
+cd aktimetrix-reference-project-order-monitor
+docker compose up -d
+./mvnw spring-boot:run
 ```
-<dependency>
-    <groupId>com.aktimetrix</groupId>
-    <artifactId>aktimetrix-core</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
-</dependency>
+
+In a second terminal, send the order's events one at a time:
+
+```bash
+send() { docker compose exec -T kafka /opt/kafka/bin/kafka-console-producer.sh \
+           --bootstrap-server localhost:9092 --topic order-events < "events/$1"; }
+
+send order-placed.json      # placed at 23:46
+send order-shipped.json     # shipped at 01:30
+send order-delivered.json   # delivered at 10:30
 ```
 
-2. Add the below configuration in application.properties (.yml)
+After each one, ask where the order is:
 
-```properties
-
-# database configuration
-spring.data.mongodb.database=svm
-spring.data.mongodb.uri={{ MONGODB_URI}}
-spring.jackson.serialization.write-dates-as-timestamps=false
-
-#message broker configuration if you are using confluent cloud.
-spring.kafka.properties.sasl.jaas.config=org.apache.kafka.common.security.plain.PlainLoginModule   required username='{{ CLUSTER_API_KEY }}'   password='{{CLUSTER_API_SECRET}}';
-spring.kafka.properties.sasl.mechanism=PLAIN
-spring.kafka.properties.session.timeout.ms=45000
-spring.kafka.properties.security.protocol=SASL_SSL
-spring.kafka.properties.bootstrap.servers={{ BROKER_ENDPOINT  }}
-
-#application configuration
-spring.cloud.stream.function.bindings.processor-in-0=event-processor
-spring.cloud.stream.function.bindings.measure-in-0=step-event-processor
-spring.cloud.stream.function.definition=processor;measure
-spring.cloud.stream.bindings.event-processor.group=processor.group.0
-spring.cloud.stream.bindings.event-processor.destination=order-event-topic
-spring.cloud.stream.bindings.step-event-processor.group=step.group.0
-spring.cloud.stream.bindings.step-event-processor.destination=step-instance-out-0
-spring.cloud.stream.source=process-instance;step-instance;measurement-instance
-spring.cloud.stream.kafka.bindings.measurement-instance-out-0.producer.configuration.[key.serializer]=org.apache.kafka.common.serialization.StringSerializer
-spring.cloud.stream.kafka.bindings.process-instance-out-0.producer.configuration.[key.serializer]=org.apache.kafka.common.serialization.StringSerializer
-spring.cloud.stream.kafka.bindings.step-instance-out-0.producer.configuration.[key.serializer]=org.apache.kafka.common.serialization.StringSerializer
-spring.cloud.stream.kafka.bindings.step-event-processor.consumer.enableDlq=true
-spring.cloud.stream.kafka.bindings.step-event-processor.consumer.dlqName=input-topic-dlq
-logging.level.com.aktimetrix=DEBUG
+```bash
+curl -s 'http://localhost:8080/process-instances?tenant=AA&entityId=1234'
 ```
-This project reads its connection settings from environment variables, so no credentials are committed (see [`.env.example`](./.env.example)):
+
+## What happens
+
+| After | `PLACE` | `SHIP` (planned 01:46) | `DELIVER` (planned 09:46) | Process |
+|---|---|---|---|---|
+| `order-placed.json` | Completed, 23:46 | Created | Created | Created |
+| `order-shipped.json` | Completed | Completed, 01:30, **ON_TIME** | Created | Created |
+| `order-delivered.json` | Completed | Completed, **ON_TIME** | Completed, 10:30, **LATE** | **Completed** |
+
+When a step's planned time passes and its event hasn't arrived, the overdue monitor marks it **OVERDUE**. It checks
+every minute (`aktimetrix.monitor.overdue-check-interval`). The sample events are dated 2022, so on a live run their
+planned times are already in the past: `SHIP` and `DELIVER` show `OVERDUE` about a minute after the order is
+placed, until their events arrive and they are judged `ON_TIME` or `LATE` against the plan.
+
+The query returns the process instance with its steps (abbreviated):
+
+```json
+[{
+  "processCode": "ORDER_DELIVERY", "entityId": "1234", "status": "Completed", "complete": true,
+  "metadata": { "orderId": "1234", "customerId": "1", "orderTotal": 100.0, "orderCurrency": "USD" },
+  "steps": [
+    { "stepCode": "PLACE",   "status": "Completed", "actualAt": "2022-05-22T23:46:00", "plannedAt": null,                  "timeliness": null },
+    { "stepCode": "SHIP",    "status": "Completed", "actualAt": "2022-05-23T01:30:00", "plannedAt": "2022-05-23T01:46:00", "timeliness": "ON_TIME" },
+    { "stepCode": "DELIVER", "status": "Completed", "actualAt": "2022-05-23T10:30:00", "plannedAt": "2022-05-23T09:46:00", "timeliness": "LATE" }
+  ]
+}]
+```
+
+Everything is also published to Kafka for dashboards and alerting:
+
+| Topic | Messages |
+|---|---|
+| `process-instance-out-0` | a process was created |
+| `step-instance-out-0` | a step was `CREATED`, `COMPLETED`, or became `OVERDUE` |
+| `measurement-instance-out-0` | a planned (`P`) or actual (`A`) `TIME` |
+
+```bash
+docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+  --bootstrap-server localhost:9092 --topic step-instance-out-0 --from-beginning
+```
+
+## Test it
+
+```bash
+./mvnw test
+```
+
+[`OrderMonitorEndToEndTest`](src/test/java/com/aktimetrix/orderprocessmonitor/OrderMonitorEndToEndTest.java) runs
+the story above against an embedded Kafka broker and an in-memory MongoDB, with a clock it moves forward to see
+`DELIVER` become overdue. No Docker is needed.
+
+## Configuration
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017/svm` | MongoDB connection string |
+| `MONGODB_URI` | `mongodb://localhost:27017/order-monitor` | MongoDB connection string |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Kafka bootstrap servers |
-| `SPRING_PROFILES_ACTIVE` | — | Set to `confluent` to connect to Confluent Cloud over SASL_SSL |
-| `KAFKA_API_KEY` / `KAFKA_API_SECRET` | — | Confluent Cloud API key and secret (only with the `confluent` profile) |
+| `SPRING_PROFILES_ACTIVE` | none | Set to `confluent` to connect to Confluent Cloud over SASL_SSL |
+| `KAFKA_API_KEY` / `KAFKA_API_SECRET` | none | Confluent Cloud API key and secret (only with the `confluent` profile) |
 
-With a local MongoDB and Kafka broker no variables are needed. For Confluent Cloud:
+No credentials are committed: see [`.env.example`](.env.example). All `aktimetrix.*` settings are described in the
+framework's [configuration reference](https://github.com/arun406/aktimetrix/blob/main/docs/configuration.md).
 
-```bash
-export MONGODB_URI='mongodb+srv://<user>:<password>@<cluster>/svm'
-export KAFKA_BOOTSTRAP_SERVERS='<broker-endpoint>:9092'
-export SPRING_PROFILES_ACTIVE=confluent
-export KAFKA_API_KEY='<api-key>'
-export KAFKA_API_SECRET='<api-secret>'
-```
+## Make it yours
 
-3. Add the aktimetrix core package ( `"com.aktimetrix.core"`) to application component scan as shown below.
-Final Application file looks like below. 
-```java
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.context.annotation.ComponentScan;
+To monitor a different process, change the JSON and the meters:
 
-@ComponentScan(basePackages = {"com.aktimetrix.orderprocessmonitor", "com.aktimetrix.core"})
-@SpringBootApplication
-public class OrderProcessMonitorApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(OrderProcessMonitorApplication.class, args);
-    }
-}
-```
-4. Run the Application.
-If you use Maven, run the following command in a terminal window (in the complete) directory:
-```
-   ./mvnw spring-boot:run
-```
-5. Create the reference data. 
-    Connect to the Mongo DB's svm database and upload the reference data. Download the sample data from [this](./src/main/resources/) location.
-6. Alternatively, reference data can be created using executing the given postman collection. Download the postman collection from [this](./src/main/resources/) location.
-7. Reference data creates `ORDER_DELIVERY` process as collection of  `PLACE, SHIP and DELIVER` steps and each step contains `TIME` measurement type as planned measurements.
-Order delivery process will be initiated by the `ORDER_PLACED_EVENT`.
-8. Let's define a order placed event `ORDER_PLACED_EVENT`.
-```json
-{
-  "tenantKey": "AA",
-  "eventId": "51541182-81fa-4727-afd5-114acdf086b1",
-  "eventName": "order placed event",
-  "eventType": "ORDER",
-  "eventCode": "ORDER_PLACED_EVENT",
-  "eventTime": "2015-11-18T00:00:00.000+0200",
-  "eventUTCTime": "2015-11-18 00:00:00",
-  "source": "AA",
-  "entityId": "1234",
-  "entityType": "com.ecom.order",
-  "entity": {
-    "orderId": "1234",
-    "orderedOn": "2022-05-22 23:46:00",
-    "customerId": "1",
-    "orderTotal": 100,
-    "orderCurrency": "USD",
-    "productId": "1",
-    "quantity": 2,
-    "shippingAddress": "Mr John Smith 132, My Street, Kingston, New York 12401 United States"
-  },
-  "eventDetails": {
-   }
-}
-```
-The above event structure is self-explanatory. Important property to note is `eventCode`. We will be using in the event handler.
-
-10. Create the Order POJO. Sample is given below.
-```java
-import com.fasterxml.jackson.annotation.JsonFormat;
-import lombok.Data;
-
-import java.io.Serializable;
-import java.time.LocalDateTime;
-
-@Data
-public class Order implements Serializable {
-    String orderId;
-    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    LocalDateTime orderedOn;
-    String customerId;
-    double orderTotal;
-    String orderCurrency;
-    String productId;
-    int quantity;
-    String shippingAddress;
-}
-```
-9. Create `ORDER_PLACED_EVENT` handler by extending `AbstractEventHandler` and annotating the class with `@EventHandler`. When Order is placed in the business application, this event handler will be invoked to create the process instant and step instances for each order.
-The event handler creation is simple as below.
-```java
-    @Component
-    @EventHandler(eventType = "ORDER_PLACED_EVENT")
-    public class OrderPlacedEventHandler extends AbstractEventHandler {
-    } 
-```
-`eventType` in the `@EventHandler` should match the `eventCode` from event published.
-10. Create the Process Handler for Order Delivery Process. 
-Process Handler should extend the `AbstractProcessHandler` and it should be annotated with `@ProcessHandler`.
-```java
-import com.aktimetrix.core.api.Constants;
-import com.aktimetrix.core.api.Context;
-import com.aktimetrix.core.impl.AbstractProcessor;
-import com.aktimetrix.core.stereotypes.ProcessHandler;
-import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
-@Component
-@ProcessHandler(processType = "ORDER_DELIVERY")
-public class OrderProcessor extends AbstractProcessor {
-    @Override
-    protected Map<String, Object> getStepMetadata(Context context) {
-        HashMap<String, Object> map = new HashMap<>();
-        LinkedHashMap<String, Object> entity = (LinkedHashMap<String, Object>) context.getProperty(Constants.ENTITY);
-
-        String orderedOn = (String) entity.get("orderedOn");
-        LocalDateTime time = LocalDateTime.parse(orderedOn, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
-
-        map.put("orderedOn", time);
-        map.put("orderedId", (String) entity.get("orderId"));
-        return map;
-    }
-
-    @Override
-    protected Map<String, Object> getProcessMetadata(Context context) {
-        return (LinkedHashMap) context.getProperty(Constants.ENTITY);
-    }
-}
-```
-`processType` in `@ProcessHandler` should match the `processCode` of the process definition. 
-metadata for the process and step instances can be added by overriding the `getStepMetadata` and `getProcessMetadata` methods.
-11. Create the `Meters` for the generating the `plan measurements` when order placed event is consumed by the application.
-12. Create the Shipped step Plan Time Meter as below. Any `Meter` class should be annotated with @Measurement annotation and extends the `AbstractMeter` class. 
-```java
-import com.aktimetrix.core.meter.impl.AbstractMeter;
-import com.aktimetrix.core.model.StepInstance;
-import com.aktimetrix.core.stereotypes.Measurement;
-import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-
-@Component
-@Measurement(code = "TIME", stepCode = "SHIP")
-public class OrderShippedPlanTimeMeter extends AbstractMeter {
-    @Override
-    protected String getMeasurementUnit(String tenant, StepInstance step) {
-        return "TIMESTAMP";
-    }
-
-    @Override
-    protected String getMeasurementValue(String tenant, StepInstance step) {
-        String orderedOn = (String) step.getMetadata().get("orderedOn");
-        LocalDateTime time = LocalDateTime.parse(orderedOn, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-
-        return String.valueOf(time.plus(2, ChronoUnit.HOURS));
-    }
-} 
-```
-`code` and `stepCode` properties of Measurement annotation should reflect the measurement defined at step definition.
-Here we are assuming plan time for order ship step should be 2 hours from the order placed time. 
-
-13. Create the Delivery step Plan Time Meter as below.
-```java
-
-import com.aktimetrix.core.meter.impl.AbstractMeter;
-import com.aktimetrix.core.model.StepInstance;
-import com.aktimetrix.core.stereotypes.Measurement;
-import org.springframework.stereotype.Component;
-
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-
-@Component
-@Measurement(code = "TIME", stepCode = "DELIVER")
-public class OrderDeliveredPlanTimeMeter extends AbstractMeter {
-    @Override
-    protected String getMeasurementUnit(String tenant, StepInstance step) {
-        return "TIMESTAMP";
-    }
-
-    @Override
-    protected String getMeasurementValue(String tenant, StepInstance step) {
-        String orderedOn = (String) step.getMetadata().get("orderedOn");
-        LocalDateTime time = LocalDateTime.parse(orderedOn, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        return String.valueOf(time.plus(10, ChronoUnit.HOURS));
-    }
-} 
-```
-
-Here we are assuming plan time for order delivery step should be 10 hours from the order placed time.
-
-14. Now we are ready to test the application. Restart the application and send the `ORDER_PLACED_EVENT` to `order-event-topic` kafka topic. This topic name is defined in the `application.properties` as `spring.cloud.stream.bindings.event-processor.destination=order-event-topic`
-
-    _You can send the request using kafka-console-producer.sh as below_
-    `_./bin/kafka-console-producer.sh --bootstrap-server=localhost:9092 --topic order-event-topic < /mnt/c/source/order-process-monitor/requests/request1.json_`
-15. You can check the planned measurements are computed and published to the `measurement-instance-out-0`.
+1. Describe the process and its steps in `aktimetrix/process-definitions.json` and `aktimetrix/step-definitions.json`.
+   For each step, list the event that completes it, and add `{ "measurementCode": "TIME", "type": "P" }` if it has
+   a deadline.
+2. Write one `@Measurement(code = "TIME", stepCode = "…")` meter per planned step.
+3. Optionally, write a `@ProcessHandler` to choose the metadata the meters need.
 
 ## License
 
