@@ -281,4 +281,6 @@ Here we are assuming plan time for order delivery step should be 10 hours from t
     `_./bin/kafka-console-producer.sh --bootstrap-server=localhost:9092 --topic order-event-topic < /mnt/c/source/order-process-monitor/requests/request1.json_`
 15. You can check the planned measurements are computed and published to the `measurement-instance-out-0`.
 
+## License
 
+This project is released under the [MIT License](./LICENSE).
