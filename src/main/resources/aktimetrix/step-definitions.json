@@ -1,0 +1,29 @@
+[
+  {
+    "tenant": "AA",
+    "stepCode": "PLACE",
+    "stepName": "Order placed",
+    "status": "CONFIRMED",
+    "optionalInd": "N",
+    "startEventCodes": ["ORDER_PLACED_EVENT"],
+    "measurements": []
+  },
+  {
+    "tenant": "AA",
+    "stepCode": "SHIP",
+    "stepName": "Order shipped",
+    "status": "CONFIRMED",
+    "optionalInd": "N",
+    "startEventCodes": ["ORDER_SHIPPED_EVENT"],
+    "measurements": [ { "measurementCode": "TIME", "type": "P" } ]
+  },
+  {
+    "tenant": "AA",
+    "stepCode": "DELIVER",
+    "stepName": "Order delivered",
+    "status": "CONFIRMED",
+    "optionalInd": "N",
+    "startEventCodes": ["ORDER_DELIVERED_EVENT"],
+    "measurements": [ { "measurementCode": "TIME", "type": "P" } ]
+  }
+]
