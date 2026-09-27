@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    name: Build and test (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: [11, 21]
+    steps:
+      - uses: actions/checkout@v4
+      # aktimetrix-core is not on Maven Central yet: build it from its main branch
+      - uses: actions/checkout@v4
+        with:
+          repository: arun406/aktimetrix
+          ref: main
+          path: .deps/aktimetrix
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - name: Install aktimetrix-core
+        run: ./mvnw -B install -DskipTests
+        working-directory: .deps/aktimetrix
+      # the end-to-end test runs on an embedded Kafka and an in-memory MongoDB: no services needed
+      - run: ./mvnw -B verify

@@ -18,6 +18,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -55,6 +56,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * events in {@code events/}: order 1234 is placed, ships on time, is not delivered by its planned time, and is
  * delivered late.
  */
+@AutoConfigureMetrics  // tests switch metrics export off unless asked
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "aktimetrix.monitor.overdue-check-interval=PT1H"  // the test runs the overdue check itself
 })
@@ -141,6 +143,14 @@ class OrderMonitorEndToEndTest {
         Map<String, String> timeliness = new HashMap<>();
         answer.get(0).get("steps").forEach(step -> timeliness.put(step.get("stepCode").asText(), step.get("timeliness").asText()));
         assertThat(timeliness).containsEntry("SHIP", "ON_TIME").containsEntry("DELIVER", "LATE");
+
+        // the monitor's metrics are exposed for Prometheus
+        String prometheus = rest.getForObject("/actuator/prometheus", String.class);
+        assertThat(prometheus)
+                .contains("aktimetrix_steps_completed_total{step=\"SHIP\",tenant=\"AA\",timeliness=\"ON_TIME\",}")
+                .contains("aktimetrix_steps_completed_total{step=\"DELIVER\",tenant=\"AA\",timeliness=\"LATE\",}")
+                .contains("aktimetrix_steps_overdue_total{step=\"DELIVER\",tenant=\"AA\",}")
+                .contains("aktimetrix_processes_completed_total{process=\"ORDER_DELIVERY\",tenant=\"AA\",}");
 
         // planned and actual measurements were published for downstream consumers
         List<String> published = measurementsPublished(5);
