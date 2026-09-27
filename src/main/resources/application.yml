@@ -1,59 +1,21 @@
+# Everything else (Kafka bindings, serializers, Jackson) has defaults in aktimetrix-core.
 spring:
   application:
-    name: processor
+    name: order-process-monitor
   data:
     mongodb:
-      database: svm
-      uri: ${MONGODB_URI:mongodb://localhost:27017/svm}
-  jackson:
-    serialization:
-      write-dates-as-timestamps: false
-  #    default-property-inclusion: always, non_null, non_absent, non_default, non_empty
-  # Kafka connection. Defaults to a local broker; activate the "confluent" profile
-  # (application-confluent.yml) to connect to Confluent Cloud with SASL credentials.
+      uri: ${MONGODB_URI:mongodb://localhost:27017/order-monitor}
   kafka:
     properties:
-      session:
-        timeout:
-          ms: '45000'
-      bootstrap:
-        servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+      bootstrap.servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
-  cloud:
-    stream:
-      function:
-        bindings:
-          processor-in-0: event-processor
-          measure-in-0: step-event-processor
-        definition: processor;measure
-      bindings:
-        event-processor:
-          group: processor.group.0
-          destination: order-event-topic
-        step-event-processor:
-          group: step.group.0
-          destination: step-instance-out-0
-      source: process-instance;step-instance;measurement-instance
-      kafka:
-        bindings:
-          measurement-instance-out-0:
-            producer:
-              configuration:
-                "[key.serializer]": org.apache.kafka.common.serialization.StringSerializer
-          process-instance-out-0:
-            producer:
-              configuration:
-                "[key.serializer]": org.apache.kafka.common.serialization.StringSerializer
-          step-instance-out-0:
-            producer:
-              configuration:
-                "[key.serializer]": org.apache.kafka.common.serialization.StringSerializer
-          step-event-processor:
-            consumer:
-              enableDlq: true
-              dlqName: input-topic-dlq
+aktimetrix:
+  events:
+    topic: order-events          # where the shop publishes its business events
+  time-zone: UTC                 # zone of the planned and actual times
+  monitor:
+    overdue-check-interval: PT1M # how often to look for steps past their planned time (ISO-8601)
 
 logging:
   level:
-    com.aktimetrix: DEBUG
-
+    com.aktimetrix: INFO

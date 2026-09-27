@@ -3,16 +3,18 @@ package com.aktimetrix.orderprocessmonitor.meter;
 import com.aktimetrix.core.meter.impl.AbstractMeter;
 import com.aktimetrix.core.model.StepInstance;
 import com.aktimetrix.core.stereotypes.Measurement;
+import com.aktimetrix.orderprocessmonitor.OrderDelivery;
 import org.springframework.stereotype.Component;
 
-import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-
+/**
+ * Plans the DELIVER step: an order should be delivered within 10 hours of being placed.
+ */
 @Component
-@Measurement(code = "TIME", stepCode = "DELIVER")
+@Measurement(code = OrderDelivery.TIME, stepCode = OrderDelivery.DELIVER)
 public class OrderDeliveredPlanTimeMeter extends AbstractMeter {
+
+    static final int HOURS_AFTER_ORDER = 10;
+
     @Override
     protected String getMeasurementUnit(String tenant, StepInstance step) {
         return "TIMESTAMP";
@@ -20,8 +22,6 @@ public class OrderDeliveredPlanTimeMeter extends AbstractMeter {
 
     @Override
     protected String getMeasurementValue(String tenant, StepInstance step) {
-        String orderedOn = (String) step.getMetadata().get("orderedOn");
-        LocalDateTime time = LocalDateTime.parse(orderedOn, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss"));
-        return String.valueOf(time.plus(10, ChronoUnit.HOURS));
+        return String.valueOf(metadataTime(step, "orderedOn").plusHours(HOURS_AFTER_ORDER));
     }
 }
