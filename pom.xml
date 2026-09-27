@@ -12,69 +12,44 @@
     <artifactId>order-process-monitor</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>order-process-monitor</name>
-    <description>Demo project for Aktimetrix</description>
+    <description>Reference project for Aktimetrix: monitors e-commerce order delivery</description>
     <properties>
-        <java.version>18</java.version>
-        <spring-cloud.version>2021.0.3-SNAPSHOT</spring-cloud.version>
+        <java.version>11</java.version>
+        <spring-cloud.version>2021.0.3</spring-cloud.version>
         <lombok.version>1.18.34</lombok.version>
+        <mongo-java-server.version>1.44.0</mongo-java-server.version>
     </properties>
     <dependencies>
-            <dependency>
-                <groupId>com.aktimetrix</groupId>
-                <artifactId>aktimetrix-core</artifactId>
-                <version>0.0.1-SNAPSHOT</version>
-            </dependency>
+        <!-- brings Spring Web, Spring Data MongoDB and Spring Cloud Stream with the Kafka binder -->
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-mongodb</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.kafka</groupId>
-            <artifactId>kafka-streams</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream-binder-kafka</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream-binder-kafka-streams</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.kafka</groupId>
-            <artifactId>spring-kafka</artifactId>
+            <groupId>com.aktimetrix</groupId>
+            <artifactId>aktimetrix-core</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <dependency>
-            <groupId>org.springframework.cloud</groupId>
-            <artifactId>spring-cloud-stream</artifactId>
-            <scope>test</scope>
-            <classifier>test-binder</classifier>
-            <type>test-jar</type>
-        </dependency>
+        <!-- embedded Kafka broker for the end-to-end test -->
         <dependency>
             <groupId>org.springframework.kafka</groupId>
             <artifactId>spring-kafka-test</artifactId>
             <scope>test</scope>
         </dependency>
-
+        <!-- in-memory MongoDB-compatible server for the end-to-end test -->
+        <dependency>
+            <groupId>de.bwaldvogel</groupId>
+            <artifactId>mongo-java-server</artifactId>
+            <version>${mongo-java-server.version}</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -104,23 +79,4 @@
             </plugin>
         </plugins>
     </build>
-    <repositories>
-        <repository>
-            <id>spring-snapshots</id>
-            <name>Spring Snapshots</name>
-            <url>https://repo.spring.io/snapshot</url>
-            <releases>
-                <enabled>false</enabled>
-            </releases>
-        </repository>
-        <repository>
-            <id>spring-milestones</id>
-            <name>Spring Milestones</name>
-            <url>https://repo.spring.io/milestone</url>
-            <snapshots>
-                <enabled>false</enabled>
-            </snapshots>
-        </repository>
-    </repositories>
-
 </project>

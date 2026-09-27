@@ -1,0 +1,18 @@
+[
+  {
+    "tenant": "AA",
+    "processCode": "ORDER_DELIVERY",
+    "processName": "Order delivery",
+    "processDescription": "From the moment an order is placed until it is delivered",
+    "categoryCode": "ORDER",
+    "subCategoryCode": "DELIVERY",
+    "entityType": "com.ecom.order",
+    "startEventCodes": ["ORDER_PLACED_EVENT"],
+    "status": "CONFIRMED",
+    "steps": [
+      { "stepCode": "PLACE" },
+      { "stepCode": "SHIP" },
+      { "stepCode": "DELIVER" }
+    ]
+  }
+]

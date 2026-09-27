@@ -4,32 +4,51 @@ import com.aktimetrix.core.api.Constants;
 import com.aktimetrix.core.api.Context;
 import com.aktimetrix.core.impl.AbstractProcessor;
 import com.aktimetrix.core.stereotypes.ProcessHandler;
+import com.aktimetrix.orderprocessmonitor.OrderDelivery;
+import com.aktimetrix.orderprocessmonitor.transferobjects.Order;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
+/**
+ * Creates the ORDER_DELIVERY process instance of an order, and decides what to remember about the order: the
+ * process instance keeps a summary, and every step keeps the order time its meter plans from.
+ * <p>
+ * Optional: without it, Aktimetrix stores the whole order as metadata.
+ */
 @Component
-@ProcessHandler(processType = "ORDER_DELIVERY")
+@ProcessHandler(processType = OrderDelivery.PROCESS)
 public class OrderProcessor extends AbstractProcessor {
-    @Override
-    protected Map<String, Object> getStepMetadata(Context context) {
-        HashMap<String, Object> map = new HashMap<>();
-        LinkedHashMap<String, Object> entity = (LinkedHashMap<String, Object>) context.getProperty(Constants.ENTITY);
 
-        String orderedOn = (String) entity.get("orderedOn");
-        LocalDateTime time = LocalDateTime.parse(orderedOn, DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+    private final ObjectMapper objectMapper;
 
-        map.put("orderedOn", time);
-        map.put("orderedId", (String) entity.get("orderId"));
-        return map;
+    public OrderProcessor(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 
     @Override
     protected Map<String, Object> getProcessMetadata(Context context) {
-        return (LinkedHashMap) context.getProperty(Constants.ENTITY);
+        Order order = order(context);
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("orderId", order.getOrderId());
+        metadata.put("customerId", order.getCustomerId());
+        metadata.put("orderTotal", order.getOrderTotal());
+        metadata.put("orderCurrency", order.getOrderCurrency());
+        return metadata;
+    }
+
+    @Override
+    protected Map<String, Object> getStepMetadata(Context context) {
+        Order order = order(context);
+        Map<String, Object> metadata = new HashMap<>();
+        metadata.put("orderId", order.getOrderId());
+        metadata.put("orderedOn", order.getOrderedOn());
+        return metadata;
+    }
+
+    private Order order(Context context) {
+        return objectMapper.convertValue(context.getProperty(Constants.ENTITY), Order.class);
     }
 }

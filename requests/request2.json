@@ -1,1 +1,0 @@
-{"tenantKey":"AA","eventId":"7c1e0a52-3f4b-4d52-9a57-2f7f3f1c9b01","eventName":"order shipped event","eventType":"ORDER","eventCode":"ORDER_SHIPPED_EVENT","eventTime":"2022-05-23T01:30:00.000+0000","eventUTCTime":"2022-05-23 01:30:00","source":"AA","entityId":"1234","entityType":"com.ecom.order","entity":{"orderId":"1234"},"eventDetails":{}}
