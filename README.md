@@ -281,6 +281,20 @@ Here we are assuming plan time for order delivery step should be 10 hours from t
     `_./bin/kafka-console-producer.sh --bootstrap-server=localhost:9092 --topic order-event-topic < /mnt/c/source/order-process-monitor/requests/request1.json_`
 15. You can check the planned measurements are computed and published to the `measurement-instance-out-0`.
 
+
+## Track milestones
+
+`OrderShippedEventHandler` and `OrderDeliveredEventHandler` extend `AbstractMilestoneEventHandler`. When an
+`ORDER_SHIPPED_EVENT` or `ORDER_DELIVERED_EVENT` arrives for an order, Aktimetrix completes the matching step
+and publishes an actual `TIME` measurement (type `A`) to `measurement-instance-out-0`, next to the planned one.
+
+```bash
+./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order-event-topic < requests/request2.json   # shipped
+./bin/kafka-console-producer.sh --bootstrap-server localhost:9092 --topic order-event-topic < requests/request3.json   # delivered
+```
+
+When the delivery step completes, the order's process instance is marked complete.
+
 ## License
 
 This project is released under the [Apache License 2.0](./LICENSE).
