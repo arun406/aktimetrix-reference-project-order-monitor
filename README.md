@@ -94,12 +94,24 @@ Everything is also published to Kafka for dashboards and alerting:
 | Topic | Messages |
 |---|---|
 | `process-instance-out-0` | a process was created |
-| `step-instance-out-0` | a step was `CREATED`, `COMPLETED`, or became `OVERDUE` |
+| `step-instance-out-0` | a step was `CREATED`, `COMPLETED`, or became `AT_RISK` or `OVERDUE` |
 | `measurement-instance-out-0` | a planned (`P`) or actual (`A`) `TIME` |
 
 ```bash
 docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server localhost:9092 --topic step-instance-out-0 --from-beginning
+```
+
+Events reach Kafka through an outbox in MongoDB, so if Kafka is briefly down they are sent once it's back.
+
+### Metrics
+
+Spring Boot Actuator exposes the monitor's metrics for Prometheus:
+
+```bash
+curl -s http://localhost:8080/actuator/prometheus | grep aktimetrix_steps_completed
+# aktimetrix_steps_completed_total{step="SHIP",tenant="AA",timeliness="ON_TIME",} 1.0
+# aktimetrix_steps_completed_total{step="DELIVER",tenant="AA",timeliness="LATE",} 1.0
 ```
 
 ## Test it
@@ -110,7 +122,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
 
 [`OrderMonitorEndToEndTest`](src/test/java/com/aktimetrix/orderprocessmonitor/OrderMonitorEndToEndTest.java) runs
 the story above against an embedded Kafka broker and an in-memory MongoDB, with a clock it moves forward to see
-`DELIVER` become overdue. No Docker is needed.
+`DELIVER` become overdue, and checks the Prometheus metrics. No Docker is needed; CI runs it on every pull request.
 
 ## Configuration
 
