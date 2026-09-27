@@ -15,6 +15,8 @@
     <description>Reference project for Aktimetrix: monitors e-commerce order delivery</description>
     <properties>
         <java.version>11</java.version>
+        <!-- compile against the Java 11 API, whatever JDK builds it -->
+        <maven.compiler.release>11</maven.compiler.release>
         <spring-cloud.version>2021.0.3</spring-cloud.version>
         <lombok.version>1.18.34</lombok.version>
         <mongo-java-server.version>1.44.0</mongo-java-server.version>
@@ -25,6 +27,15 @@
             <groupId>com.aktimetrix</groupId>
             <artifactId>aktimetrix-core</artifactId>
             <version>0.0.1-SNAPSHOT</version>
+        </dependency>
+        <!-- health checks, and Aktimetrix's metrics at /actuator/metrics and /actuator/prometheus -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
         </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>

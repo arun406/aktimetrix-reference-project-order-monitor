@@ -16,6 +16,12 @@ aktimetrix:
   monitor:
     overdue-check-interval: PT1M # how often to look for steps past their planned time (ISO-8601)
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+
 logging:
   level:
     com.aktimetrix: INFO
