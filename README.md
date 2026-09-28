@@ -11,6 +11,19 @@ e-commerce orders and tells you, for every order, whether each milestone happene
 The business rule it monitors: an order is **placed**, should **ship within 2 hours**, and should be **delivered
 within 10 hours**.
 
+The Aktimetrix model needs only a **message broker** and a **state store** (see the
+[white paper](https://github.com/arun406/aktimetrix#42-infrastructure-contract)). This example uses the reference
+implementation's bindings:
+
+| Role in the model | In this example |
+|---|---|
+| Message broker | Apache Kafka: inbound channel `order-events`, and the outbound channels |
+| State store | MongoDB: definitions, process, step and measurement instances, and the outbox |
+| Runtime | Spring Boot application with `aktimetrix-core` |
+
+The commands below are therefore Kafka- and MongoDB-specific. The definitions, meters and process handler are not:
+they would stay the same with any other broker or store.
+
 ## What's in it
 
 The whole application is some JSON, one process handler and two meters. Everything else comes from the framework.
@@ -22,7 +35,7 @@ The whole application is some JSON, one process handler and two meters. Everythi
 | [`OrderProcessor`](src/main/java/com/aktimetrix/orderprocessmonitor/processhandler/OrderProcessor.java) | Decides what to remember about an order: the steps keep `orderedOn` for the meters. |
 | [`OrderShippedPlanTimeMeter`](src/main/java/com/aktimetrix/orderprocessmonitor/meter/OrderShippedPlanTimeMeter.java) | Plans `SHIP` at *ordered + 2 h*. |
 | [`OrderDeliveredPlanTimeMeter`](src/main/java/com/aktimetrix/orderprocessmonitor/meter/OrderDeliveredPlanTimeMeter.java) | Plans `DELIVER` at *ordered + 10 h*. |
-| [`application.yml`](src/main/resources/application.yml) | MongoDB, Kafka, and the inbound topic `order-events`. |
+| [`application.yml`](src/main/resources/application.yml) | Connections to the broker (Kafka) and state store (MongoDB), and the inbound channel `order-events`. |
 | [`eventhandler/`](src/main/java/com/aktimetrix/orderprocessmonitor/eventhandler) | *Optional.* Takes each step's actual time from the order (`orderedOn`, `shippedAt`, `deliveredAt`) instead of the event envelope. Without them, Aktimetrix handles every event itself. |
 | [`events/`](events) | Sample events for order `1234`. |
 | [`OrderMonitorEndToEndTest`](src/test/java/com/aktimetrix/orderprocessmonitor/OrderMonitorEndToEndTest.java) | The whole story below, as a test. |
@@ -38,7 +51,7 @@ You need **JDK 11+** and **Docker**.
 git clone https://github.com/arun406/aktimetrix.git
 (cd aktimetrix && ./mvnw install -DskipTests)
 
-# 2. Start Kafka and MongoDB, then the monitor
+# 2. Start the broker (Kafka) and state store (MongoDB), then the monitor
 git clone https://github.com/arun406/aktimetrix-reference-project-order-monitor.git
 cd aktimetrix-reference-project-order-monitor
 docker compose up -d
@@ -89,9 +102,10 @@ The query returns the process instance with its steps (abbreviated):
 }]
 ```
 
-Everything is also published to Kafka for dashboards and alerting:
+Every result is also published to the outbound channels, Kafka topics in this example, for dashboards and
+alerting:
 
-| Topic | Messages |
+| Channel | Messages |
 |---|---|
 | `process-instance-out-0` | a process was created |
 | `step-instance-out-0` | a step was `CREATED`, `COMPLETED`, or became `AT_RISK` or `OVERDUE` |
@@ -102,7 +116,8 @@ docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server localhost:9092 --topic step-instance-out-0 --from-beginning
 ```
 
-Events reach Kafka through an outbox in MongoDB, so if Kafka is briefly down they are sent once it's back.
+Results reach the broker through an outbox in the state store, so if the broker is briefly down they are sent once
+it's back.
 
 ### Metrics
 
@@ -121,7 +136,7 @@ curl -s http://localhost:8080/actuator/prometheus | grep aktimetrix_steps_comple
 ```
 
 [`OrderMonitorEndToEndTest`](src/test/java/com/aktimetrix/orderprocessmonitor/OrderMonitorEndToEndTest.java) runs
-the story above against an embedded Kafka broker and an in-memory MongoDB, with a clock it moves forward to see
+the story above against an embedded broker (Kafka) and an in-memory state store (MongoDB), with a clock it moves forward to see
 `DELIVER` become overdue, and checks the Prometheus metrics. No Docker is needed; CI runs it on every pull request.
 
 ## Configuration
