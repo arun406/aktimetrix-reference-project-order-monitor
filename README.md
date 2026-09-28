@@ -54,12 +54,9 @@ git clone https://github.com/arun406/aktimetrix.git
 # 2. Start the broker (Kafka) and state store (MongoDB), then the monitor
 git clone https://github.com/arun406/aktimetrix-reference-project-order-monitor.git
 cd aktimetrix-reference-project-order-monitor
-docker compose up -d --wait
+docker compose up -d
 ./mvnw spring-boot:run
 ```
-
-MongoDB runs as a single-node replica set, so each event's state and the results it publishes are written in one
-transaction. `--wait` returns once the replica set is ready.
 
 In a second terminal, send the order's events one at a time:
 
@@ -119,7 +116,7 @@ docker compose exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
   --bootstrap-server localhost:9092 --topic step-instance-out-0 --from-beginning
 ```
 
-Results reach the broker through an outbox in the state store, written in the same transaction as the state, so if the broker is briefly down they are sent once
+Results reach the broker through an outbox in the state store, so if the broker is briefly down they are sent once
 it's back.
 
 ### Metrics
@@ -146,7 +143,7 @@ the story above against an embedded broker (Kafka) and an in-memory state store 
 
 | Variable | Default | Purpose |
 |---|---|---|
-| `MONGODB_URI` | `mongodb://localhost:27017/order-monitor?directConnection=true` | MongoDB connection string |
+| `MONGODB_URI` | `mongodb://localhost:27017/order-monitor` | MongoDB connection string |
 | `KAFKA_BOOTSTRAP_SERVERS` | `localhost:9092` | Kafka bootstrap servers |
 | `SPRING_PROFILES_ACTIVE` | none | Set to `confluent` to connect to Confluent Cloud over SASL_SSL |
 | `KAFKA_API_KEY` / `KAFKA_API_SECRET` | none | Confluent Cloud API key and secret (only with the `confluent` profile) |
