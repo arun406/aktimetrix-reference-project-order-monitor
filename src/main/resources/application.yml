@@ -4,7 +4,7 @@ spring:
     name: order-process-monitor
   data:
     mongodb:
-      uri: ${MONGODB_URI:mongodb://localhost:27017/order-monitor?directConnection=true}
+      uri: ${MONGODB_URI:mongodb://localhost:27017/order-monitor}
   kafka:
     properties:
       bootstrap.servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
