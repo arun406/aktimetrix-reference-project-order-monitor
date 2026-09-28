@@ -1,0 +1,1 @@
+{"tenantKey":"AA","eventId":"00000000-0000-0000-0000-000012340009","eventType":"ORDER","eventCode":"ORDER_RATED_EVENT","eventName":"Order rated","eventUTCTime":"2024-03-02 08:00:00","source":"shop","entityType":"com.ecom.order","entityId":"1234","entity":{"orderId":"1234","review":{"stars":4}}}
