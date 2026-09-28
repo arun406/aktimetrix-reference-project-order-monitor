@@ -1,8 +1,11 @@
 package com.aktimetrix.orderprocessmonitor;
 
+import com.aktimetrix.core.api.Conformance;
 import com.aktimetrix.core.api.Timeliness;
+import com.aktimetrix.core.model.MeasurementInstance;
 import com.aktimetrix.core.model.ProcessInstance;
 import com.aktimetrix.core.model.StepInstance;
+import com.aktimetrix.core.repository.MeasurementInstanceRepository;
 import com.aktimetrix.core.repository.ProcessInstanceRepository;
 import com.aktimetrix.core.repository.StepInstanceRepository;
 import com.aktimetrix.core.service.OverdueStepMonitor;
@@ -45,23 +48,25 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Runs the order monitor end to end, against an embedded Kafka broker and an in-memory MongoDB, with the sample
- * events in {@code events/}: order 1234 is placed, ships on time, is not delivered by its planned time, and is
- * delivered late.
+ * events in {@code events/}: the white paper's example (section 1.1). Order 1234 of a priority customer is created at
+ * 09:00, planned by rule, runs through its seven steps with time, distance, fuel, temperature and rating compared
+ * with their plans, is delivered within its one-day promise, and is rated the next morning.
  */
 @AutoConfigureMetrics  // tests switch metrics export off unless asked
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "aktimetrix.monitor.overdue-check-interval=PT1H"  // the test runs the overdue check itself
 })
 @EmbeddedKafka(partitions = 1, topics = {"order-events", "measurement-instance-out-0", "step-instance-out-0",
-        "process-instance-out-0"})
+        "process-instance-out-0", "order-events.dlq"})
 class OrderMonitorEndToEndTest {
 
     private static final MongoServer MONGO = new MongoServer(new MemoryBackend());
@@ -84,7 +89,7 @@ class OrderMonitorEndToEndTest {
     static class TestClock {
         @Bean
         MutableClock clock() {
-            return new MutableClock(LocalDateTime.of(2022, 5, 22, 23, 50));
+            return new MutableClock(LocalDateTime.of(2024, 3, 1, 9, 1));
         }
     }
 
@@ -99,69 +104,132 @@ class OrderMonitorEndToEndTest {
     @Autowired
     private StepInstanceRepository stepInstances;
     @Autowired
+    private MeasurementInstanceRepository measurements;
+    @Autowired
     private TestRestTemplate rest;
     @Autowired
     private ObjectMapper objectMapper;
 
     @Test
-    void monitorsAnOrderFromPlacedToDelivered() throws Exception {
-        // 1. the order is placed: the process starts, PLACE completes, SHIP and DELIVER are planned
-        send("order-placed.json");
-        StepInstance ship = await(() -> step("SHIP"), step -> step.getPlannedAt() != null);
-        assertThat(ship.getPlannedAt()).isEqualTo(LocalDateTime.of(2022, 5, 23, 1, 46));
-        StepInstance deliver = await(() -> step("DELIVER"), step -> step.getPlannedAt() != null);
-        assertThat(deliver.getPlannedAt()).isEqualTo(LocalDateTime.of(2022, 5, 23, 9, 46));
-        StepInstance place = await(() -> step("PLACE"), step -> "Completed".equals(step.getStatus()));
-        assertThat(place.getActualAt()).isEqualTo(LocalDateTime.of(2022, 5, 22, 23, 46));
+    void monitorsAnOrderFromCreatedToRated() throws Exception {
+        // 1. created at 09:00: the order and its seven steps are planned, by duration and by rule
+        send("01-order-created.json");
+        await(() -> step("DELIVERED"), step -> step.getPlannedAt() != null);
+        assertThat(plannedAt("CONFIRM")).isEqualTo(at(9, 5));
+        assertThat(plannedAt("PAY")).isEqualTo(at(9, 15));
+        assertThat(plannedAt("HANDOVER")).isEqualTo(at(11, 0));
+        assertThat(plannedAt("ACCEPT")).isEqualTo(at(11, 15));
+        assertThat(plannedAt("TRAVEL")).isEqualTo(at(12, 0));
+        assertThat(plannedAt("DELIVERED")).as("rule: priority customer").isEqualTo(at(12, 15));
+        assertThat(processInstance().getPlannedAt()).as("rule: priority, within 1 day")
+                .isEqualTo(LocalDateTime.of(2024, 3, 2, 9, 0));
 
-        // 2. at 01:00 nothing is overdue yet
-        clock.set(LocalDateTime.of(2022, 5, 23, 1, 0));
-        assertThat(overdueStepMonitor.checkOverdueSteps()).isEmpty();
+        // 2. confirmed and paid on time (payment 5 minutes after plan, within its tolerance)
+        send("02-order-confirmed.json");
+        send("03-payment-confirmed.json");
+        assertThat(await(() -> step("PAY"), done()).getTimeliness()).isEqualTo(Timeliness.ON_TIME);
+        assertThat(step("CONFIRM").getTimeliness()).isEqualTo(Timeliness.ON_TIME);
 
-        // 3. the order ships at 01:30, before its planned 01:46
-        send("order-shipped.json");
-        ship = await(() -> step("SHIP"), step -> "Completed".equals(step.getStatus()));
-        assertThat(ship.getActualAt()).isEqualTo(LocalDateTime.of(2022, 5, 23, 1, 30));
-        assertThat(ship.getTimeliness()).isEqualTo(Timeliness.ON_TIME);
+        // 3. at 11:30 the parcel has not been handed over, nor accepted: both are overdue, and later steps at risk
+        clock.set(at(11, 30));
+        assertThat(overdueStepMonitor.checkOverdueSteps()).extracting(StepInstance::getStepCode)
+                .containsExactlyInAnyOrder("HANDOVER", "ACCEPT");
+        assertThat(step("TRAVEL").getTimeliness()).isEqualTo(Timeliness.AT_RISK);
 
-        // 4. at 10:00 there is no delivery yet, and it was planned for 09:46
-        clock.set(LocalDateTime.of(2022, 5, 23, 10, 0));
-        assertThat(overdueStepMonitor.checkOverdueSteps()).extracting(StepInstance::getStepCode).containsExactly("DELIVER");
-        assertThat(step("DELIVER").getTimeliness()).isEqualTo(Timeliness.OVERDUE);
+        // 4. handed over at 11:40 and accepted at 11:50: both late
+        send("04-handed-to-agent.json");
+        send("05-agent-accepted.json");
+        assertThat(await(() -> step("ACCEPT"), done()).getTimeliness()).isEqualTo(Timeliness.LATE);
+        assertThat(step("HANDOVER").getTimeliness()).isEqualTo(Timeliness.LATE);
 
-        // 5. the order is delivered at 10:30: late, and the process is complete
-        send("order-delivered.json");
-        deliver = await(() -> step("DELIVER"), step -> "Completed".equals(step.getStatus()));
-        assertThat(deliver.getTimeliness()).isEqualTo(Timeliness.LATE);
-        assertThat(processInstance().isComplete()).isTrue();
+        // 5. on the way, a location update: 8 km so far, already over the planned 5 km
+        send("06-travel-started.json");
+        send("07-location-updated.json");
+        MeasurementInstance reading = await(() -> measurements.findAll().stream()
+                .filter(MeasurementInstance::isInterim).findFirst().orElse(null), m -> true);
+        assertThat(reading.getValue()).isEqualTo("8");
+        assertThat(reading.getConformance()).isEqualTo(Conformance.OUT_OF_TOLERANCE);
+
+        // 6. arrived at 12:45 after 12 km, using 1.0 litre; delivered at 12:55, the parcel at 40 °C, for €9.50
+        send("08-arrived.json");
+        send("09-delivered.json");
+        await(() -> processInstance(), process -> process.isComplete());
+        assertThat(step("TRAVEL").getTimeliness()).isEqualTo(Timeliness.LATE);
+        assertThat(step("DELIVERED").getTimeliness()).isEqualTo(Timeliness.LATE);
+        assertActual("TRAVEL", "DISTANCE", "12", "7", Conformance.OUT_OF_TOLERANCE);
+        assertActual("TRAVEL", "FUEL", "1.0", "0.6", Conformance.OUT_OF_TOLERANCE);
+        assertActual("DELIVERED", "TEMPERATURE", "40", "10", Conformance.OUT_OF_TOLERANCE);
+
+        // the order as a whole: delivered within its one-day promise, over its planned cost
+        ProcessInstance order = processInstance();
+        assertThat(order.getStatus()).isEqualTo("Completed");
+        assertThat(order.getTimeliness()).isEqualTo(Timeliness.ON_TIME);
+        assertActual(null, "COST", "9.5", "1.5", Conformance.OUT_OF_TOLERANCE);
+        // and its fuel per km, from its steps: 1.0 L / 12 km against 0.4 L / 5 km, within 10 %
+        MeasurementInstance fuelPerKm = actual(null, "FUEL_PER_KM");
+        assertThat(fuelPerKm.getPlannedValue()).isEqualTo("0.08");
+        assertThat(fuelPerKm.getConformance()).isEqualTo(Conformance.WITHIN_TOLERANCE);
+
+        // 7. rated the next morning, after the order completed: four stars, within tolerance of five
+        send("10-rated.json");
+        await(() -> step("RATED"), done());
+        assertActual("RATED", "RATING", "4", "-1", Conformance.WITHIN_TOLERANCE);
 
         // "where is order 1234?"
         JsonNode answer = objectMapper.readTree(
                 rest.getForObject("/process-instances?tenant=AA&entityId=1234", String.class));
         assertThat(answer).hasSize(1);
-        assertThat(answer.get(0).get("status").asText()).isEqualTo("Completed");
+        assertThat(answer.get(0).get("timeliness").asText()).isEqualTo("ON_TIME");
         Map<String, String> timeliness = new HashMap<>();
         answer.get(0).get("steps").forEach(step -> timeliness.put(step.get("stepCode").asText(), step.get("timeliness").asText()));
-        assertThat(timeliness).containsEntry("SHIP", "ON_TIME").containsEntry("DELIVER", "LATE");
+        assertThat(timeliness).containsEntry("CONFIRM", "ON_TIME").containsEntry("PAY", "ON_TIME")
+                .containsEntry("HANDOVER", "LATE").containsEntry("TRAVEL", "LATE").containsEntry("DELIVERED", "LATE");
 
         // the monitor's metrics are exposed for Prometheus
         String prometheus = rest.getForObject("/actuator/prometheus", String.class);
         assertThat(prometheus)
-                .contains("aktimetrix_steps_completed_total{step=\"SHIP\",tenant=\"AA\",timeliness=\"ON_TIME\",}")
-                .contains("aktimetrix_steps_completed_total{step=\"DELIVER\",tenant=\"AA\",timeliness=\"LATE\",}")
-                .contains("aktimetrix_steps_overdue_total{step=\"DELIVER\",tenant=\"AA\",}")
+                .contains("aktimetrix_steps_completed_total{step=\"PAY\",tenant=\"AA\",timeliness=\"ON_TIME\",}")
+                .contains("aktimetrix_steps_completed_total{step=\"TRAVEL\",tenant=\"AA\",timeliness=\"LATE\",}")
+                .contains("aktimetrix_steps_overdue_total{step=\"HANDOVER\",tenant=\"AA\",}")
+                .contains("aktimetrix_measurements_actual_total{conformance=\"OUT_OF_TOLERANCE\",measurement=\"DISTANCE\",tenant=\"AA\",}")
                 .contains("aktimetrix_processes_completed_total{process=\"ORDER_DELIVERY\",tenant=\"AA\",}");
 
-        // planned and actual measurements were published for downstream consumers
-        List<String> published = measurementsPublished(5);
-        assertThat(published).contains("P SHIP 2022-05-23T01:46", "P DELIVER 2022-05-23T09:46",
-                "A PLACE 2022-05-22T23:46", "A SHIP 2022-05-23T01:30", "A DELIVER 2022-05-23T10:30");
+        // plans, actuals, readings and metrics were published for downstream consumers
+        List<String> published = measurementsPublished(Set.of("A TRAVEL DISTANCE 12", "A - FUEL_PER_KM", "A RATED RATING 4"));
+        assertThat(published).contains("P TRAVEL DISTANCE 5", "A TRAVEL DISTANCE 8", "A TRAVEL DISTANCE 12",
+                "P - COST 8", "A - COST 9.5", "A - FUEL_PER_KM", "A RATED RATING 4");
 
-        // 6. a replayed event changes nothing
-        send("order-placed.json");
+        // 8. a replayed event changes nothing
+        send("01-order-created.json");
         Thread.sleep(2000);
         assertThat(processInstances.findAll()).hasSize(1);
-        assertThat(stepInstances.findAll()).hasSize(3);
+        assertThat(stepInstances.findAll()).hasSize(7);
+    }
+
+    private static LocalDateTime at(int hour, int minute) {
+        return LocalDateTime.of(2024, 3, 1, hour, minute);
+    }
+
+    private static Predicate<StepInstance> done() {
+        return step -> "Completed".equals(step.getStatus());
+    }
+
+    private LocalDateTime plannedAt(String stepCode) {
+        return step(stepCode).getPlannedAt();
+    }
+
+    private MeasurementInstance actual(String stepCode, String code) {
+        return measurements.findAll().stream()
+                .filter(m -> "A".equals(m.getType()) && !m.isInterim() && code.equals(m.getCode())
+                        && Objects.equals(stepCode, m.getStepCode()))
+                .findFirst().orElseThrow(() -> new AssertionError("no actual " + code + " for " + stepCode));
+    }
+
+    private void assertActual(String stepCode, String code, String value, String deviation, Conformance conformance) {
+        MeasurementInstance actual = actual(stepCode, code);
+        assertThat(actual.getValue()).as(code).isEqualTo(value);
+        assertThat(actual.getDeviation()).as(code).isEqualTo(deviation);
+        assertThat(actual.getConformance()).as(code).isEqualTo(conformance);
     }
 
     private void send(String eventFile) throws IOException {
@@ -186,23 +254,29 @@ class OrderMonitorEndToEndTest {
                 .stream().findFirst().orElse(null);
     }
 
-    private List<String> measurementsPublished(int expected) throws IOException {
+    /**
+     * "TYPE STEP CODE VALUE" of every measurement published, until the expected ones have arrived; a derived metric is
+     * "TYPE - CODE", its value varying in precision.
+     */
+    private List<String> measurementsPublished(Set<String> expected) throws IOException {
         Map<String, Object> props = KafkaTestUtils.consumerProps("verifier", "false", kafka);
         props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
         List<String> measurements = new ArrayList<>();
         try (Consumer<String, String> consumer = new DefaultKafkaConsumerFactory<>(props, new StringDeserializer(),
                 new StringDeserializer()).createConsumer()) {
             kafka.consumeFromAnEmbeddedTopic(consumer, "measurement-instance-out-0");
-            long deadline = System.currentTimeMillis() + 10_000;
-            while (measurements.size() < expected && System.currentTimeMillis() < deadline) {
+            long deadline = System.currentTimeMillis() + 20_000;
+            while (!measurements.containsAll(expected) && System.currentTimeMillis() < deadline) {
                 for (ConsumerRecord<String, String> record : KafkaTestUtils.getRecords(consumer, 1000)) {
                     JsonNode entity = objectMapper.readTree(record.value()).get("entity");
-                    measurements.add(entity.get("type").asText() + " " + entity.get("stepCode").asText() + " "
-                            + entity.get("value").asText());
+                    String step = entity.get("stepCode").isNull() ? "-" : entity.get("stepCode").asText();
+                    boolean derived = !entity.get("derivedFrom").isNull();
+                    measurements.add(entity.get("type").asText() + " " + step + " " + entity.get("code").asText()
+                            + (derived ? "" : " " + entity.get("value").asText()));
                 }
             }
         }
-        return measurements.stream().distinct().collect(Collectors.toList());
+        return measurements;
     }
 
     private static <T> T await(Supplier<T> value, Predicate<T> condition) throws InterruptedException {

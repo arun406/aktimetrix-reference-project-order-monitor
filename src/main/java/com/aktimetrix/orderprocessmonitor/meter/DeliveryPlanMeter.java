@@ -7,13 +7,12 @@ import com.aktimetrix.orderprocessmonitor.OrderDelivery;
 import org.springframework.stereotype.Component;
 
 /**
- * Plans the DELIVER step: an order should be delivered within 10 hours of being placed.
+ * When the parcel should reach the customer: 3 h 15 min after the order is created for a priority customer, 2 days
+ * for others.
  */
 @Component
-@Measurement(code = OrderDelivery.TIME, stepCode = OrderDelivery.DELIVER)
-public class OrderDeliveredPlanTimeMeter extends AbstractMeter {
-
-    static final int HOURS_AFTER_ORDER = 10;
+@Measurement(code = OrderDelivery.TIME, stepCode = OrderDelivery.DELIVERED)
+public class DeliveryPlanMeter extends AbstractMeter {
 
     @Override
     protected String getMeasurementUnit(String tenant, StepInstance step) {
@@ -22,6 +21,9 @@ public class OrderDeliveredPlanTimeMeter extends AbstractMeter {
 
     @Override
     protected String getMeasurementValue(String tenant, StepInstance step) {
-        return String.valueOf(metadataTime(step, "orderedOn").plusHours(HOURS_AFTER_ORDER));
+        boolean priority = Boolean.TRUE.equals(step.getMetadata().get("priority"));
+        return String.valueOf(priority
+                ? metadataTime(step, "createdAt").plusHours(3).plusMinutes(15)
+                : metadataTime(step, "createdAt").plusDays(2));
     }
 }

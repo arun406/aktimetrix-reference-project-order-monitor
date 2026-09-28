@@ -1,29 +1,38 @@
 [
-  {
-    "tenant": "AA",
-    "stepCode": "PLACE",
-    "stepName": "Order placed",
-    "status": "CONFIRMED",
-    "optionalInd": "N",
-    "startEventCodes": ["ORDER_PLACED_EVENT"],
-    "measurements": []
-  },
-  {
-    "tenant": "AA",
-    "stepCode": "SHIP",
-    "stepName": "Order shipped",
-    "status": "CONFIRMED",
-    "optionalInd": "N",
-    "startEventCodes": ["ORDER_SHIPPED_EVENT"],
-    "measurements": [ { "measurementCode": "TIME", "type": "P" } ]
-  },
-  {
-    "tenant": "AA",
-    "stepCode": "DELIVER",
-    "stepName": "Order delivered",
-    "status": "CONFIRMED",
-    "optionalInd": "N",
+  { "tenant": "AA", "stepCode": "CONFIRM", "stepName": "Order confirmed", "status": "CONFIRMED",
+    "startEventCodes": ["ORDER_CONFIRMED_EVENT"], "plannedWithin": "PT5M" },
+
+  { "tenant": "AA", "stepCode": "PAY", "stepName": "Payment confirmed", "status": "CONFIRMED",
+    "startEventCodes": ["PAYMENT_CONFIRMED_EVENT"], "plannedWithin": "PT15M", "tolerance": "PT5M" },
+
+  { "tenant": "AA", "stepCode": "HANDOVER", "stepName": "Handed to the delivery agent", "status": "CONFIRMED",
+    "startEventCodes": ["HANDED_TO_AGENT_EVENT"], "plannedWithin": "PT2H" },
+
+  { "tenant": "AA", "stepCode": "ACCEPT", "stepName": "Delivery agent accepted", "status": "CONFIRMED",
+    "startEventCodes": ["AGENT_ACCEPTED_EVENT"], "plannedWithin": "PT2H15M" },
+
+  { "tenant": "AA", "stepCode": "TRAVEL", "stepName": "Travel to the customer", "status": "CONFIRMED",
+    "startEventCodes": ["TRAVEL_STARTED_EVENT"], "endEventCodes": ["ARRIVED_EVENT"],
+    "progressEventCodes": ["LOCATION_UPDATED_EVENT"], "plannedWithin": "PT3H",
+    "measurements": [
+      { "measurementCode": "DISTANCE", "type": "P", "value": "5", "unit": "KM", "tolerance": "20%", "worseWhen": "HIGHER" },
+      { "measurementCode": "DISTANCE", "type": "A", "valueFrom": "route.distanceKm", "unit": "KM" },
+      { "measurementCode": "FUEL", "type": "P", "value": "0.4", "unit": "L", "tolerance": "25%", "worseWhen": "HIGHER" },
+      { "measurementCode": "FUEL", "type": "A", "valueFrom": "fuelLitres", "unit": "L" }
+    ] },
+
+  { "tenant": "AA", "stepCode": "DELIVERED", "stepName": "Delivered", "status": "CONFIRMED",
     "startEventCodes": ["ORDER_DELIVERED_EVENT"],
-    "measurements": [ { "measurementCode": "TIME", "type": "P" } ]
-  }
+    "measurements": [
+      { "measurementCode": "TIME", "type": "P" },
+      { "measurementCode": "TEMPERATURE", "type": "P", "value": "30", "unit": "C", "tolerance": "5", "worseWhen": "HIGHER" },
+      { "measurementCode": "TEMPERATURE", "type": "A", "valueFrom": "parcelTemperatureC", "unit": "C" }
+    ] },
+
+  { "tenant": "AA", "stepCode": "RATED", "stepName": "Rated by the customer", "status": "CONFIRMED",
+    "startEventCodes": ["ORDER_RATED_EVENT"], "optionalInd": "Y",
+    "measurements": [
+      { "measurementCode": "RATING", "type": "P", "value": "5", "unit": "STARS", "tolerance": "1", "worseWhen": "LOWER" },
+      { "measurementCode": "RATING", "type": "A", "valueFrom": "review.stars", "unit": "STARS" }
+    ] }
 ]
