@@ -12,7 +12,7 @@ The business rule it monitors: an order is **placed**, should **ship within 2 ho
 within 10 hours**.
 
 The Aktimetrix model needs only a **message broker** and a **state store** (see the
-[white paper](https://github.com/arun406/aktimetrix#42-infrastructure-contract)). This example uses the reference
+[white paper](https://github.com/arun406/aktimetrix#52-infrastructure-contract)). This example uses the reference
 implementation's bindings:
 
 | Role in the model | In this example |
