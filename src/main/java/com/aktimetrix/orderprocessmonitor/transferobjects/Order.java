@@ -7,17 +7,16 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 
 /**
- * The entity of an ORDER_PLACED_EVENT.
+ * The entity of an ORDER_CREATED_EVENT.
  */
 @Data
 public class Order implements Serializable {
     private String orderId;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime orderedOn;
+    private LocalDateTime createdAt;
     private String customerId;
+    private boolean priority;
     private double orderTotal;
     private String orderCurrency;
-    private String productId;
-    private int quantity;
     private String shippingAddress;
 }

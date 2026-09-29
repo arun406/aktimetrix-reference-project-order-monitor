@@ -1,0 +1,1 @@
+{"tenantKey":"AA","eventId":"00000000-0000-0000-0000-000012340002","eventType":"ORDER","eventCode":"PAYMENT_CONFIRMED_EVENT","eventName":"Payment confirmed","eventUTCTime":"2024-03-01 09:20:00","source":"payment-provider","entityType":"com.ecom.order","entityId":"1234","entity":{"orderId":"1234"}}

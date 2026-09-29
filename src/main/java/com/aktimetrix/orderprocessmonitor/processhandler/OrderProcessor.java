@@ -14,7 +14,8 @@ import java.util.Map;
 
 /**
  * Creates the ORDER_DELIVERY process instance of an order, and decides what to remember about the order: the
- * process instance keeps a summary, and every step keeps the order time its meter plans from.
+ * process instance keeps a summary, and every step keeps what its planning rules need, the creation time and whether
+ * the customer is a priority customer.
  * <p>
  * Optional: without it, Aktimetrix stores the whole order as metadata.
  */
@@ -34,6 +35,8 @@ public class OrderProcessor extends AbstractProcessor {
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("orderId", order.getOrderId());
         metadata.put("customerId", order.getCustomerId());
+        metadata.put("priority", order.isPriority());
+        metadata.put("createdAt", order.getCreatedAt());
         metadata.put("orderTotal", order.getOrderTotal());
         metadata.put("orderCurrency", order.getOrderCurrency());
         return metadata;
@@ -44,7 +47,8 @@ public class OrderProcessor extends AbstractProcessor {
         Order order = order(context);
         Map<String, Object> metadata = new HashMap<>();
         metadata.put("orderId", order.getOrderId());
-        metadata.put("orderedOn", order.getOrderedOn());
+        metadata.put("priority", order.isPriority());
+        metadata.put("createdAt", order.getCreatedAt());
         return metadata;
     }
 

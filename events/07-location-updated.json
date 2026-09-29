@@ -1,0 +1,1 @@
+{"tenantKey":"AA","eventId":"00000000-0000-0000-0000-000012340006","eventType":"ORDER","eventCode":"LOCATION_UPDATED_EVENT","eventName":"Location updated","eventUTCTime":"2024-03-01 12:20:00","source":"delivery-app","entityType":"com.ecom.order","entityId":"1234","entity":{"orderId":"1234","route":{"distanceKm":8}}}

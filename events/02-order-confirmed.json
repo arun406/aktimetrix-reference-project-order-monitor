@@ -1,0 +1,1 @@
+{"tenantKey":"AA","eventId":"00000000-0000-0000-0000-000012340001","eventType":"ORDER","eventCode":"ORDER_CONFIRMED_EVENT","eventName":"Order confirmed","eventUTCTime":"2024-03-01 09:02:00","source":"shop","entityType":"com.ecom.order","entityId":"1234","entity":{"orderId":"1234"}}
