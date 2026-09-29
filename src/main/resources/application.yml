@@ -13,8 +13,8 @@ aktimetrix:
   events:
     topic: order-events          # where the shop publishes its business events
   time-zone: UTC                 # zone of the planned and actual times
-  monitor:
-    overdue-check-interval: PT1M # how often to look for steps past their planned time (ISO-8601)
+  alarms:
+    check-interval: PT5S         # how often to fire the alarms due at step and process deadlines (ISO-8601)
 
 management:
   endpoints:
