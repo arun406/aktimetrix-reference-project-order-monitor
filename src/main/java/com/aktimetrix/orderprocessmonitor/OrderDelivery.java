@@ -8,16 +8,16 @@ public final class OrderDelivery {
 
     public static final String PROCESS = "ORDER_DELIVERY";
 
-    public static final String PLACE = "PLACE";
-    public static final String SHIP = "SHIP";
-    public static final String DELIVER = "DELIVER";
-
-    public static final String ORDER_PLACED_EVENT = "ORDER_PLACED_EVENT";
-    public static final String ORDER_SHIPPED_EVENT = "ORDER_SHIPPED_EVENT";
-    public static final String ORDER_DELIVERED_EVENT = "ORDER_DELIVERED_EVENT";
+    public static final String CONFIRM = "CONFIRM";
+    public static final String PAY = "PAY";
+    public static final String HANDOVER = "HANDOVER";
+    public static final String ACCEPT = "ACCEPT";
+    public static final String TRAVEL = "TRAVEL";
+    public static final String DELIVERED = "DELIVERED";
+    public static final String RATED = "RATED";
 
     /**
-     * The planned and actual time of a step.
+     * The planned and actual time of a step, and the planned completion of the whole order.
      */
     public static final String TIME = "TIME";
 

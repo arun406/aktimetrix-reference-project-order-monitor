@@ -1,0 +1,1 @@
+{"tenantKey":"AA","eventId":"00000000-0000-0000-0000-000012340005","eventType":"ORDER","eventCode":"TRAVEL_STARTED_EVENT","eventName":"Travel started","eventUTCTime":"2024-03-01 11:55:00","source":"delivery-app","entityType":"com.ecom.order","entityId":"1234","entity":{"orderId":"1234"}}

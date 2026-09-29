@@ -1,0 +1,1 @@
+{"tenantKey":"AA","eventId":"00000000-0000-0000-0000-000012340003","eventType":"ORDER","eventCode":"HANDED_TO_AGENT_EVENT","eventName":"Handed to the delivery agent","eventUTCTime":"2024-03-01 11:40:00","source":"warehouse","entityType":"com.ecom.order","entityId":"1234","entity":{"orderId":"1234","agentId":"A-7"}}
