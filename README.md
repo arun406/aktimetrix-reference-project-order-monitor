@@ -34,10 +34,12 @@ implementation's bindings:
 |---|---|
 | Message broker | Apache Kafka: inbound channel `order-events`, and the outbound channels |
 | State store | MongoDB: definitions, process, step and measurement instances, and the outbox |
-| Runtime | Spring Boot application with `aktimetrix-core` |
+| Runtime | Spring Boot application with `aktimetrix-core`, `aktimetrix-store-mongodb` and `aktimetrix-broker-kafka` |
 
 The commands below are therefore Kafka- and MongoDB-specific. The definitions, meters and process handler are not:
-they would stay the same with any other broker or store.
+they stay the same with any other broker or store. To keep the state in PostgreSQL, replace `aktimetrix-store-mongodb`
+with `aktimetrix-store-jdbc` and the PostgreSQL driver; to use RabbitMQ, replace `aktimetrix-broker-kafka` with
+`aktimetrix-broker-rabbitmq`. Then change the connection settings in `application.yml`.
 
 ## What's in it
 

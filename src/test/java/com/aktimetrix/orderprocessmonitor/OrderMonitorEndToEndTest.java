@@ -5,9 +5,9 @@ import com.aktimetrix.core.api.Timeliness;
 import com.aktimetrix.core.model.MeasurementInstance;
 import com.aktimetrix.core.model.ProcessInstance;
 import com.aktimetrix.core.model.StepInstance;
-import com.aktimetrix.core.repository.MeasurementInstanceRepository;
-import com.aktimetrix.core.repository.ProcessInstanceRepository;
-import com.aktimetrix.core.repository.StepInstanceRepository;
+import com.aktimetrix.core.store.MeasurementInstanceStore;
+import com.aktimetrix.core.store.ProcessInstanceStore;
+import com.aktimetrix.core.store.StepInstanceStore;
 import com.aktimetrix.core.service.OverdueStepMonitor;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -100,11 +100,11 @@ class OrderMonitorEndToEndTest {
     @Autowired
     private OverdueStepMonitor overdueStepMonitor;
     @Autowired
-    private ProcessInstanceRepository processInstances;
+    private ProcessInstanceStore processInstances;
     @Autowired
-    private StepInstanceRepository stepInstances;
+    private StepInstanceStore stepInstances;
     @Autowired
-    private MeasurementInstanceRepository measurements;
+    private MeasurementInstanceStore measurementStore;
     @Autowired
     private TestRestTemplate rest;
     @Autowired
@@ -145,7 +145,7 @@ class OrderMonitorEndToEndTest {
         // 5. on the way, a location update: 8 km so far, already over the planned 5 km
         send("06-travel-started.json");
         send("07-location-updated.json");
-        MeasurementInstance reading = await(() -> measurements.findAll().stream()
+        MeasurementInstance reading = await(() -> allMeasurements().stream()
                 .filter(MeasurementInstance::isInterim).findFirst().orElse(null), m -> true);
         assertThat(reading.getValue()).isEqualTo("8");
         assertThat(reading.getConformance()).isEqualTo(Conformance.OUT_OF_TOLERANCE);
@@ -202,8 +202,8 @@ class OrderMonitorEndToEndTest {
         // 8. a replayed event changes nothing
         send("01-order-created.json");
         Thread.sleep(2000);
-        assertThat(processInstances.findAll()).hasSize(1);
-        assertThat(stepInstances.findAll()).hasSize(7);
+        assertThat(processInstances.findByEntityId("AA", "1234")).hasSize(1);
+        assertThat(stepInstances.findByProcessInstance("AA", processInstance().getId())).hasSize(7);
     }
 
     private static LocalDateTime at(int hour, int minute) {
@@ -219,7 +219,7 @@ class OrderMonitorEndToEndTest {
     }
 
     private MeasurementInstance actual(String stepCode, String code) {
-        return measurements.findAll().stream()
+        return allMeasurements().stream()
                 .filter(m -> "A".equals(m.getType()) && !m.isInterim() && code.equals(m.getCode())
                         && Objects.equals(stepCode, m.getStepCode()))
                 .findFirst().orElseThrow(() -> new AssertionError("no actual " + code + " for " + stepCode));
@@ -242,7 +242,12 @@ class OrderMonitorEndToEndTest {
     }
 
     private ProcessInstance processInstance() {
-        return processInstances.findAll().stream().findFirst().orElse(null);
+        return processInstances.findByEntityId("AA", "1234").stream().findFirst().orElse(null);
+    }
+
+    private List<MeasurementInstance> allMeasurements() {
+        ProcessInstance process = processInstance();
+        return process == null ? List.of() : measurementStore.findByProcessInstance("AA", process.getId());
     }
 
     private StepInstance step(String code) {
@@ -250,8 +255,8 @@ class OrderMonitorEndToEndTest {
         if (process == null) {
             return null;
         }
-        return stepInstances.findByTenantAndStepCodeAndProcessInstanceId("AA", code, process.getId())
-                .stream().findFirst().orElse(null);
+        return stepInstances.findByProcessInstance("AA", process.getId()).stream()
+                .filter(step -> code.equals(step.getStepCode())).findFirst().orElse(null);
     }
 
     /**
