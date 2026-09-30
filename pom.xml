@@ -10,7 +10,7 @@
     </parent>
     <groupId>com.aktimetrix</groupId>
     <artifactId>order-process-monitor</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.1.0</version>
     <name>order-process-monitor</name>
     <description>Reference project for Aktimetrix: monitors e-commerce order delivery</description>
     <properties>
@@ -26,18 +26,18 @@
         <dependency>
             <groupId>com.aktimetrix</groupId>
             <artifactId>aktimetrix-core</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.1.0</version>
         </dependency>
         <!-- the state store: MongoDB; the message broker: Kafka -->
         <dependency>
             <groupId>com.aktimetrix</groupId>
             <artifactId>aktimetrix-store-mongodb</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.1.0</version>
         </dependency>
         <dependency>
             <groupId>com.aktimetrix</groupId>
             <artifactId>aktimetrix-broker-kafka</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>0.1.0</version>
         </dependency>
         <!-- health checks, and Aktimetrix's metrics at /actuator/metrics and /actuator/prometheus -->
         <dependency>
