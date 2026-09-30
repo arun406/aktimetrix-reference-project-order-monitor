@@ -115,7 +115,10 @@ class OrderMonitorEndToEndTest {
     void monitorsAnOrderFromCreatedToRated() throws Exception {
         // 1. created at 09:00: the order and its seven steps are planned, by duration and by rule
         send("01-order-created.json");
-        await(() -> step("DELIVERED"), step -> step.getPlannedAt() != null);
+        // every step but the optional rating has a plan; each step is saved on its own, so wait for all of them
+        for (String planned : new String[]{"CONFIRM", "PAY", "HANDOVER", "ACCEPT", "TRAVEL", "DELIVERED"}) {
+            await(() -> step(planned), step -> step.getPlannedAt() != null);
+        }
         assertThat(plannedAt("CONFIRM")).isEqualTo(at(9, 5));
         assertThat(plannedAt("PAY")).isEqualTo(at(9, 15));
         assertThat(plannedAt("HANDOVER")).isEqualTo(at(11, 0));

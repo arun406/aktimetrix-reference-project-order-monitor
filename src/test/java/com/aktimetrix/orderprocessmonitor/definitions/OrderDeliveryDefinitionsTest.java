@@ -35,7 +35,8 @@ class OrderDeliveryDefinitionsTest {
     @Test
     void thePlanningRulesAreTheOrdersDeadlineAndTheDeliveryTime() {
         assertThat(java.getRules()).extracting(r -> r.getProcessCode() + "/" + r.getStepCode() + "/" + r.getMeasurementCode())
-                .containsExactly("ORDER_DELIVERY/null/TIME", "null/DELIVERED/TIME");
+                .containsExactly("ORDER_DELIVERY/null/TIME", "ORDER_DELIVERY/DELIVERED/TIME");
+        assertThat(java.getRules()).extracting(Definitions.Rule::getTenant).containsOnly("AA");
 
         final ProcessInstance priority = new ProcessInstance();
         priority.setMetadata(Map.of("priority", true, "createdAt", "2024-03-01 09:00:00"));
