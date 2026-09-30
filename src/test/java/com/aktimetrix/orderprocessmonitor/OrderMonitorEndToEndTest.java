@@ -8,7 +8,7 @@ import com.aktimetrix.core.model.StepInstance;
 import com.aktimetrix.core.store.MeasurementInstanceStore;
 import com.aktimetrix.core.store.ProcessInstanceStore;
 import com.aktimetrix.core.store.StepInstanceStore;
-import com.aktimetrix.core.service.OverdueStepMonitor;
+import com.aktimetrix.core.service.AlarmScheduler;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwaldvogel.mongo.MongoServer;
@@ -63,7 +63,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 @AutoConfigureMetrics  // tests switch metrics export off unless asked
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
-        "aktimetrix.monitor.overdue-check-interval=PT1H"  // the test runs the overdue check itself
+        "aktimetrix.alarms.check-interval=PT1H",  // the test fires the alarms itself
+        "aktimetrix.monitor.overdue-check-interval=PT1H"
 })
 @EmbeddedKafka(partitions = 1, topics = {"order-events", "measurement-instance-out-0", "step-instance-out-0",
         "process-instance-out-0", "order-events.dlq"})
@@ -98,7 +99,7 @@ class OrderMonitorEndToEndTest {
     @Autowired
     private MutableClock clock;
     @Autowired
-    private OverdueStepMonitor overdueStepMonitor;
+    private AlarmScheduler alarms;
     @Autowired
     private ProcessInstanceStore processInstances;
     @Autowired
@@ -130,10 +131,12 @@ class OrderMonitorEndToEndTest {
         assertThat(await(() -> step("PAY"), done()).getTimeliness()).isEqualTo(Timeliness.ON_TIME);
         assertThat(step("CONFIRM").getTimeliness()).isEqualTo(Timeliness.ON_TIME);
 
-        // 3. at 11:30 the parcel has not been handed over, nor accepted: both are overdue, and later steps at risk
+        // 3. at 11:30 the parcel has not been handed over, nor accepted: the alarms at both deadlines fire, both
+        // are overdue, and later steps at risk
         clock.set(at(11, 30));
-        assertThat(overdueStepMonitor.checkOverdueSteps()).extracting(StepInstance::getStepCode)
-                .containsExactlyInAnyOrder("HANDOVER", "ACCEPT");
+        assertThat(alarms.fireDueAlarms()).isEqualTo(2);
+        assertThat(step("HANDOVER").getTimeliness()).isEqualTo(Timeliness.OVERDUE);
+        assertThat(step("ACCEPT").getTimeliness()).isEqualTo(Timeliness.OVERDUE);
         assertThat(step("TRAVEL").getTimeliness()).isEqualTo(Timeliness.AT_RISK);
 
         // 4. handed over at 11:40 and accepted at 11:50: both late

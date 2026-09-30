@@ -106,9 +106,10 @@ send 10-rated.json; where
 
 Four steps ran late, yet the order kept its promise: the steps and the order are judged separately.
 
-On a live run the overdue monitor checks every minute (`aktimetrix.monitor.overdue-check-interval`). The sample events
-are dated 1 March 2024, so their planned times are already in the past: steps show `OVERDUE` about a minute after the
-order is created, until their events arrive and they are judged `ON_TIME` or `LATE` against the plan.
+When the order is planned, an alarm is set at each step's deadline. On a live run due alarms are fired every 5 seconds
+(`aktimetrix.alarms.check-interval`). The sample events are dated 1 March 2024, so their deadlines are already in the
+past: steps show `OVERDUE` a few seconds after the order is created, until their events arrive and they are judged
+`ON_TIME` or `LATE` against the plan.
 
 The query returns the order with its steps (abbreviated):
 
