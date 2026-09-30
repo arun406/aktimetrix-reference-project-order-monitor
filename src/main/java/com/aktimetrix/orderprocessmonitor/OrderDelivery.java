@@ -1,8 +1,8 @@
 package com.aktimetrix.orderprocessmonitor;
 
 /**
- * The vocabulary of the order delivery process, as used in {@code aktimetrix/process-definitions.json} and
- * {@code aktimetrix/step-definitions.json}.
+ * The vocabulary of the order delivery process, as used in
+ * {@link com.aktimetrix.orderprocessmonitor.definitions.OrderDeliveryDefinitions}.
  */
 public final class OrderDelivery {
 
