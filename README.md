@@ -36,28 +36,26 @@ implementation's bindings:
 | State store | MongoDB: definitions, process, step and measurement instances, and the outbox |
 | Runtime | Spring Boot application with `aktimetrix-core`, `aktimetrix-store-mongodb` and `aktimetrix-broker-kafka` |
 
-The commands below are therefore Kafka- and MongoDB-specific. The definitions, meters and process handler are not:
+The commands below are therefore Kafka- and MongoDB-specific. The definitions and process handler are not:
 they stay the same with any other broker or store. To keep the state in PostgreSQL, replace `aktimetrix-store-mongodb`
 with `aktimetrix-store-jdbc` and the PostgreSQL driver; to use RabbitMQ, replace `aktimetrix-broker-kafka` with
 `aktimetrix-broker-rabbitmq`. Then change the connection settings in `application.yml`.
 
 ## What's in it
 
-The whole application is two JSON files, one process handler and two meters (the planning rules). Everything else
-comes from the framework.
+The whole application is one definitions class, written with the Aktimetrix Java DSL, and one process handler.
+Everything else comes from the framework.
 
 | File | Purpose |
 |---|---|
-| [`aktimetrix/process-definitions.json`](src/main/resources/aktimetrix/process-definitions.json) | The `ORDER_DELIVERY` process: started by `ORDER_CREATED_EVENT`, cancelled by `ORDER_CANCELLED_EVENT`, its seven steps, its own planned time and cost, and its fuel-per-km metric. |
-| [`aktimetrix/step-definitions.json`](src/main/resources/aktimetrix/step-definitions.json) | Each step: the events that complete it or report its progress, its planned time, and its measurements with plans and tolerances. |
+| [`OrderDeliveryDefinitions`](src/main/java/com/aktimetrix/orderprocessmonitor/definitions/OrderDeliveryDefinitions.java) | The `ORDER_DELIVERY` process, in the Java DSL: started by `ORDER_CREATED_EVENT`, cancelled by `ORDER_CANCELLED_EVENT`; its seven steps with the events that complete them or report their progress, their planned times and tolerances; the measurements compared with their plans; the fuel-per-km metric; and the two planning rules, as lambdas: the whole order within 1 day for priority customers (3 for others), and `DELIVERED` within 3 h 15 min (2 days). |
+| [`examples/order-delivery.yaml`](src/main/resources/examples/order-delivery.yaml) | The same definitions as a YAML file, for comparison; not loaded. A test checks that it stays identical to the Java definitions. |
 | [`OrderProcessor`](src/main/java/com/aktimetrix/orderprocessmonitor/processhandler/OrderProcessor.java) | Decides what to remember about an order: whether the customer is a priority customer, and when the order was created. |
-| [`OrderDeadlineMeter`](src/main/java/com/aktimetrix/orderprocessmonitor/meter/OrderDeadlineMeter.java) | The rule for the whole order: priority customers within 1 day, others within 3. |
-| [`DeliveryPlanMeter`](src/main/java/com/aktimetrix/orderprocessmonitor/meter/DeliveryPlanMeter.java) | The rule for `DELIVERED`: priority customers within 3 h 15 min, others within 2 days. |
 | [`application.yml`](src/main/resources/application.yml) | Connections to the broker (Kafka) and state store (MongoDB), and the inbound channel `order-events`. |
 | [`events/`](events) | The ten events of order `1234`, in order. |
 | [`OrderMonitorEndToEndTest`](src/test/java/com/aktimetrix/orderprocessmonitor/OrderMonitorEndToEndTest.java) | The whole story below, as a test. |
 
-The definitions are loaded from the classpath at startup, so there is no data to import by hand.
+The definitions are saved to the state store at startup, so there is no data to import by hand.
 
 ## Run it
 
@@ -178,13 +176,29 @@ framework's [configuration reference](https://github.com/arun406/aktimetrix/blob
 
 ## Make it yours
 
-To monitor a different process, change the JSON and the rules:
+To monitor a different process, change the definitions:
 
-1. Describe the process and its steps in `aktimetrix/process-definitions.json` and `aktimetrix/step-definitions.json`:
-   for each step, the events that complete it; for the process and each step, the measurements that matter, with a
-   planned value, a duration or a rule, and a tolerance.
-2. Write a `@Measurement` meter for each plan that follows a rule, such as a shorter delivery for priority customers.
-3. Optionally, write a `@ProcessHandler` to choose the metadata the rules need.
+1. Describe the process and its steps in `OrderDeliveryDefinitions`: for each step, the event that completes it
+   (`on`), or the events that start and end it (`startsOn`, `endsOn`); for the process and each step, the
+   measurements that matter, with a planned value (`measure`), a duration (`within`) or a rule (`planTime`, `plan`),
+   and a tolerance.
+2. Optionally, write a `@ProcessHandler` to choose the metadata the rules need.
+
+```java
+Definitions.tenant("AA")
+        .process("ORDER_DELIVERY", order -> order
+                .entityType("com.ecom.order")
+                .startsOn("ORDER_CREATED_EVENT")
+                .step("PAY", step -> step.on("PAYMENT_CONFIRMED_EVENT").within("PT15M").tolerance("PT5M"))
+                .step("DELIVERED", step -> step.on("ORDER_DELIVERED_EVENT")
+                        .planTime(s -> metadataTime(s, "createdAt").plusHours(4))))
+        .build();
+```
+
+Prefer to keep definitions out of the code? Put a YAML file like
+[`examples/order-delivery.yaml`](src/main/resources/examples/order-delivery.yaml) under `src/main/resources/aktimetrix/`
+instead, and write each rule as a `@Measurement` meter. The DSL and the file formats are described in the framework's
+[getting-started guide](https://github.com/arun406/aktimetrix/blob/main/docs/getting-started.md#the-same-monitor-in-java-or-yaml).
 
 If your systems already publish events in their own format, keep it and add an `EventMapper`: see
 [Extending Aktimetrix](https://github.com/arun406/aktimetrix/blob/main/docs/extending.md#accepting-your-own-event-format).
