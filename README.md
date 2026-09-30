@@ -1,7 +1,7 @@
 # Order Monitor: an Aktimetrix reference project
 
 A complete, runnable example of [Aktimetrix](https://github.com/arun406/aktimetrix): the order delivery process of
-the [white paper](https://github.com/arun406/aktimetrix#11-a-worked-example-order-delivery), end to end. For every
+the [white paper](https://github.com/arun406/aktimetrix/blob/main/docs/white-paper.md#11-a-worked-example-order-delivery), end to end. For every
 order it plans, from rules, what should happen, at the level of the order and of each of its steps. It then compares
 what does happen with that plan, in every dimension it measures: time, distance, fuel, temperature, cost and the
 customer's rating.
@@ -27,7 +27,7 @@ customer's order is due within one day, at a cost of €8, and each step has its
 | *The order* `ORDER_DELIVERY` | ended by its last mandatory step | by rule: priority within 1 day, others 3; cost €8; fuel per km = FUEL / DISTANCE | 10 %; 10 % |
 
 The Aktimetrix model needs only a **message broker** and a **state store** (see the
-[white paper](https://github.com/arun406/aktimetrix#52-infrastructure-contract)). This example uses the reference
+[white paper](https://github.com/arun406/aktimetrix/blob/main/docs/white-paper.md#52-infrastructure-contract)). This example uses the reference
 implementation's bindings:
 
 | Role in the model | In this example |
