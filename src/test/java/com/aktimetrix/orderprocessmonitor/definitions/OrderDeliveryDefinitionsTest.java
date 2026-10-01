@@ -2,8 +2,8 @@ package com.aktimetrix.orderprocessmonitor.definitions;
 
 import com.aktimetrix.core.definitions.Definitions;
 import com.aktimetrix.core.model.ProcessInstance;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.dataformat.yaml.YAMLMapper;
 import org.junit.jupiter.api.Test;
 
 import java.io.InputStream;
@@ -23,7 +23,7 @@ class OrderDeliveryDefinitionsTest {
     void theYamlExampleDescribesTheSameProcessAsTheJavaDefinitions() throws Exception {
         final Definitions yaml;
         try (InputStream in = getClass().getResourceAsStream("/examples/order-delivery.yaml")) {
-            yaml = new ObjectMapper(new YAMLFactory()).readValue(in, Definitions.class);
+            yaml = new YAMLMapper().readValue(in, Definitions.class);
         }
         final ObjectMapper json = new ObjectMapper();
 

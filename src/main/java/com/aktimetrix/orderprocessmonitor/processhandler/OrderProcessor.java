@@ -6,7 +6,7 @@ import com.aktimetrix.core.impl.AbstractProcessor;
 import com.aktimetrix.core.stereotypes.ProcessHandler;
 import com.aktimetrix.orderprocessmonitor.OrderDelivery;
 import com.aktimetrix.orderprocessmonitor.transferobjects.Order;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;

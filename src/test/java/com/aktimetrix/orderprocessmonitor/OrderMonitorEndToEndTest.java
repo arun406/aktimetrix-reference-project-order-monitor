@@ -9,8 +9,8 @@ import com.aktimetrix.core.store.MeasurementInstanceStore;
 import com.aktimetrix.core.store.ProcessInstanceStore;
 import com.aktimetrix.core.store.StepInstanceStore;
 import com.aktimetrix.core.service.AlarmScheduler;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -21,10 +21,11 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
+import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -62,6 +63,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * with their plans, is delivered within its one-day promise, and is rated the next morning.
  */
 @AutoConfigureMetrics  // tests switch metrics export off unless asked
+@AutoConfigureTestRestTemplate
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "aktimetrix.alarms.check-interval=PT1H",  // the test fires the alarms itself
         "aktimetrix.monitor.overdue-check-interval=PT1H"
@@ -75,7 +77,7 @@ class OrderMonitorEndToEndTest {
 
     @DynamicPropertySource
     static void infrastructure(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri",
+        registry.add("spring.mongodb.uri",
                 () -> "mongodb://localhost:" + MONGO_ADDRESS.getPort() + "/order-monitor");
         registry.add("spring.kafka.properties.bootstrap.servers", () -> "${spring.embedded.kafka.brokers}");
         registry.add("spring.cloud.stream.kafka.binder.brokers", () -> "${spring.embedded.kafka.brokers}");
