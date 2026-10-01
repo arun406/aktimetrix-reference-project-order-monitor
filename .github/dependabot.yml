@@ -1,0 +1,14 @@
+# Weekly pull requests that update vulnerable or outdated dependencies and GitHub Actions.
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly

@@ -5,39 +5,52 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>2.7.0</version>
+        <version>4.1.1</version>
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.aktimetrix</groupId>
     <artifactId>order-process-monitor</artifactId>
-    <version>0.1.0</version>
+    <version>0.2.0-SNAPSHOT</version>
     <name>order-process-monitor</name>
     <description>Reference project for Aktimetrix: monitors e-commerce order delivery</description>
     <properties>
-        <java.version>11</java.version>
-        <!-- compile against the Java 11 API, whatever JDK builds it -->
-        <maven.compiler.release>11</maven.compiler.release>
-        <spring-cloud.version>2021.0.3</spring-cloud.version>
-        <lombok.version>1.18.34</lombok.version>
-        <mongo-java-server.version>1.44.0</mongo-java-server.version>
+        <java.version>17</java.version>
+        <!-- compile against the Java 17 API, the baseline of Spring Boot 4, whatever JDK builds it -->
+        <maven.compiler.release>17</maven.compiler.release>
+        <spring-cloud.version>2025.1.3</spring-cloud.version>
+        <aktimetrix.version>0.2.0-SNAPSHOT</aktimetrix.version>
+        <springdoc.version>3.1.1</springdoc.version>
+        <mongo-java-server.version>1.47.0</mongo-java-server.version>
     </properties>
     <dependencies>
-        <!-- brings Spring Web, Spring Data MongoDB and Spring Cloud Stream with the Kafka binder -->
+        <!-- the runtime, with Spring Cloud Stream -->
         <dependency>
             <groupId>com.aktimetrix</groupId>
             <artifactId>aktimetrix-core</artifactId>
-            <version>0.1.0</version>
+            <version>${aktimetrix.version}</version>
         </dependency>
         <!-- the state store: MongoDB; the message broker: Kafka -->
         <dependency>
             <groupId>com.aktimetrix</groupId>
             <artifactId>aktimetrix-store-mongodb</artifactId>
-            <version>0.1.0</version>
+            <version>${aktimetrix.version}</version>
         </dependency>
         <dependency>
             <groupId>com.aktimetrix</groupId>
             <artifactId>aktimetrix-broker-kafka</artifactId>
-            <version>0.1.0</version>
+            <version>${aktimetrix.version}</version>
+        </dependency>
+        <!-- the REST API, with Spring MVC, described with OpenAPI at /v3/api-docs/aktimetrix -->
+        <dependency>
+            <groupId>com.aktimetrix</groupId>
+            <artifactId>aktimetrix-rest</artifactId>
+            <version>${aktimetrix.version}</version>
+        </dependency>
+        <!-- Swagger UI over that description, at /swagger-ui.html -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>${springdoc.version}</version>
         </dependency>
         <!-- health checks, and Aktimetrix's metrics at /actuator/metrics and /actuator/prometheus -->
         <dependency>
@@ -57,6 +70,16 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-resttestclient</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-micrometer-metrics-test</artifactId>
             <scope>test</scope>
         </dependency>
         <!-- embedded Kafka broker for the end-to-end test -->
@@ -87,6 +110,24 @@
 
     <build>
         <plugins>
+            <!-- annotation processors are declared, not found on the classpath: JDK 23 and later no longer run those -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <annotationProcessorPathsUseDepMgmt>true</annotationProcessorPathsUseDepMgmt>
+                    <annotationProcessorPaths>
+                        <path>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
+                        </path>
+                        <path>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                        </path>
+                    </annotationProcessorPaths>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

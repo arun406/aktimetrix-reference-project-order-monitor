@@ -59,7 +59,7 @@ The definitions are saved to the state store at startup, so there is no data to 
 
 ## Run it
 
-You need **JDK 11+** and **Docker**.
+You need **JDK 17+** and **Docker**.
 
 ```bash
 # 1. Build the framework (it is not on Maven Central yet)
@@ -85,6 +85,9 @@ send 02-order-confirmed.json; where
 # … and so on, up to
 send 10-rated.json; where
 ```
+
+The API is described with OpenAPI: browse it in Swagger UI at <http://localhost:8080/swagger-ui.html>, or read the
+description itself at <http://localhost:8080/v3/api-docs/aktimetrix>.
 
 ## What happens
 

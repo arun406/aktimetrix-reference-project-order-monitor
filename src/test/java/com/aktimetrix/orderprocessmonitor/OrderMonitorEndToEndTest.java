@@ -9,8 +9,8 @@ import com.aktimetrix.core.store.MeasurementInstanceStore;
 import com.aktimetrix.core.store.ProcessInstanceStore;
 import com.aktimetrix.core.store.StepInstanceStore;
 import com.aktimetrix.core.service.AlarmScheduler;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import de.bwaldvogel.mongo.MongoServer;
 import de.bwaldvogel.mongo.backend.memory.MemoryBackend;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -21,10 +21,11 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
+import org.springframework.boot.micrometer.metrics.test.autoconfigure.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.web.client.TestRestTemplate;
+import org.springframework.boot.resttestclient.TestRestTemplate;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.context.annotation.Bean;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.core.DefaultKafkaProducerFactory;
@@ -37,6 +38,7 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.Duration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
@@ -62,6 +64,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * with their plans, is delivered within its one-day promise, and is rated the next morning.
  */
 @AutoConfigureMetrics  // tests switch metrics export off unless asked
+@AutoConfigureTestRestTemplate
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "aktimetrix.alarms.check-interval=PT1H",  // the test fires the alarms itself
         "aktimetrix.monitor.overdue-check-interval=PT1H"
@@ -75,7 +78,7 @@ class OrderMonitorEndToEndTest {
 
     @DynamicPropertySource
     static void infrastructure(DynamicPropertyRegistry registry) {
-        registry.add("spring.data.mongodb.uri",
+        registry.add("spring.mongodb.uri",
                 () -> "mongodb://localhost:" + MONGO_ADDRESS.getPort() + "/order-monitor");
         registry.add("spring.kafka.properties.bootstrap.servers", () -> "${spring.embedded.kafka.brokers}");
         registry.add("spring.cloud.stream.kafka.binder.brokers", () -> "${spring.embedded.kafka.brokers}");
@@ -194,11 +197,16 @@ class OrderMonitorEndToEndTest {
         // the monitor's metrics are exposed for Prometheus
         String prometheus = rest.getForObject("/actuator/prometheus", String.class);
         assertThat(prometheus)
-                .contains("aktimetrix_steps_completed_total{step=\"PAY\",tenant=\"AA\",timeliness=\"ON_TIME\",}")
-                .contains("aktimetrix_steps_completed_total{step=\"TRAVEL\",tenant=\"AA\",timeliness=\"LATE\",}")
-                .contains("aktimetrix_steps_overdue_total{step=\"HANDOVER\",tenant=\"AA\",}")
-                .contains("aktimetrix_measurements_actual_total{conformance=\"OUT_OF_TOLERANCE\",measurement=\"DISTANCE\",tenant=\"AA\",}")
-                .contains("aktimetrix_processes_completed_total{process=\"ORDER_DELIVERY\",tenant=\"AA\",}");
+                .contains("aktimetrix_steps_completed_total{step=\"PAY\",tenant=\"AA\",timeliness=\"ON_TIME\"}")
+                .contains("aktimetrix_steps_completed_total{step=\"TRAVEL\",tenant=\"AA\",timeliness=\"LATE\"}")
+                .contains("aktimetrix_steps_overdue_total{step=\"HANDOVER\",tenant=\"AA\"}")
+                .contains("aktimetrix_measurements_actual_total{conformance=\"OUT_OF_TOLERANCE\",measurement=\"DISTANCE\",tenant=\"AA\"}")
+                .contains("aktimetrix_processes_completed_total{process=\"ORDER_DELIVERY\",tenant=\"AA\"}");
+
+        // the API describes itself with OpenAPI, browsable in Swagger UI
+        assertThat(rest.getForObject("/v3/api-docs/aktimetrix", String.class))
+                .contains("\"/process-instances\"").contains("\"/reference-data/process-definitions\"");
+        assertThat(rest.getForEntity("/swagger-ui/index.html", String.class).getStatusCode().is2xxSuccessful()).isTrue();
 
         // plans, actuals, readings and metrics were published for downstream consumers
         List<String> published = measurementsPublished(Set.of("A TRAVEL DISTANCE 12", "A - FUEL_PER_KM", "A RATED RATING 4"));
@@ -278,7 +286,7 @@ class OrderMonitorEndToEndTest {
             kafka.consumeFromAnEmbeddedTopic(consumer, "measurement-instance-out-0");
             long deadline = System.currentTimeMillis() + 20_000;
             while (!measurements.containsAll(expected) && System.currentTimeMillis() < deadline) {
-                for (ConsumerRecord<String, String> record : KafkaTestUtils.getRecords(consumer, 1000)) {
+                for (ConsumerRecord<String, String> record : KafkaTestUtils.getRecords(consumer, Duration.ofSeconds(1))) {
                     JsonNode entity = objectMapper.readTree(record.value()).get("entity");
                     String step = entity.get("stepCode").isNull() ? "-" : entity.get("stepCode").asText();
                     boolean derived = !entity.get("derivedFrom").isNull();
