@@ -18,9 +18,9 @@ jobs:
       matrix:
         java: [17, 21, 25]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # aktimetrix-core is not on Maven Central yet: build it from its main branch
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           repository: arun406/aktimetrix
           ref: main
