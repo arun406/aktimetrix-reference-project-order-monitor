@@ -38,12 +38,12 @@ import org.springframework.test.context.DynamicPropertySource;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.time.LocalDateTime;
 import java.time.Duration;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -67,7 +67,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 @AutoConfigureTestRestTemplate
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "aktimetrix.alarms.check-interval=PT1H",  // the test fires the alarms itself
-        "aktimetrix.monitor.overdue-check-interval=PT1H"
+        "aktimetrix.monitor.overdue-check-interval=PT1H",
+        // the test replays a morning of events against a clock it moves by hand
+        "aktimetrix.events.max-future-skew=P1D"
 })
 @EmbeddedKafka(partitions = 1, topics = {"order-events", "measurement-instance-out-0", "step-instance-out-0",
         "process-instance-out-0", "order-events.dlq"})
@@ -93,7 +95,7 @@ class OrderMonitorEndToEndTest {
     static class TestClock {
         @Bean
         MutableClock clock() {
-            return new MutableClock(LocalDateTime.of(2024, 3, 1, 9, 1));
+            return new MutableClock(LocalDateTime.of(2024, 3, 1, 9, 1).toInstant(ZoneOffset.UTC));
         }
     }
 
@@ -129,7 +131,7 @@ class OrderMonitorEndToEndTest {
         assertThat(plannedAt("TRAVEL")).isEqualTo(at(12, 0));
         assertThat(plannedAt("DELIVERED")).as("rule: priority customer").isEqualTo(at(12, 15));
         assertThat(processInstance().getPlannedAt()).as("rule: priority, within 1 day")
-                .isEqualTo(LocalDateTime.of(2024, 3, 2, 9, 0));
+                .isEqualTo(LocalDateTime.of(2024, 3, 2, 9, 0).toInstant(ZoneOffset.UTC));
 
         // 2. confirmed and paid on time (payment 5 minutes after plan, within its tolerance)
         send("02-order-confirmed.json");
@@ -220,15 +222,15 @@ class OrderMonitorEndToEndTest {
         assertThat(stepInstances.findByProcessInstance("AA", processInstance().getId())).hasSize(7);
     }
 
-    private static LocalDateTime at(int hour, int minute) {
-        return LocalDateTime.of(2024, 3, 1, hour, minute);
+    private static Instant at(int hour, int minute) {
+        return LocalDateTime.of(2024, 3, 1, hour, minute).toInstant(ZoneOffset.UTC);
     }
 
     private static Predicate<StepInstance> done() {
         return step -> "Completed".equals(step.getStatus());
     }
 
-    private LocalDateTime plannedAt(String stepCode) {
+    private Instant plannedAt(String stepCode) {
         return step(stepCode).getPlannedAt();
     }
 
@@ -315,12 +317,12 @@ class OrderMonitorEndToEndTest {
     static class MutableClock extends Clock {
         private Instant instant;
 
-        MutableClock(LocalDateTime start) {
+        MutableClock(Instant start) {
             set(start);
         }
 
-        void set(LocalDateTime time) {
-            this.instant = time.toInstant(ZoneOffset.UTC);
+        void set(Instant time) {
+            this.instant = time;
         }
 
         @Override

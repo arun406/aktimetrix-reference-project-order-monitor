@@ -6,8 +6,9 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.dataformat.yaml.YAMLMapper;
 import org.junit.jupiter.api.Test;
 
-import java.io.InputStream;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.io.InputStream;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -44,7 +45,7 @@ class OrderDeliveryDefinitionsTest {
         standard.setMetadata(Map.of("priority", false, "createdAt", "2024-03-01 09:00:00"));
         final Definitions.Rule deadline = java.getRules().get(0);
 
-        assertThat(deadline.getProcessRule().apply(priority)).isEqualTo(LocalDateTime.of(2024, 3, 2, 9, 0));
-        assertThat(deadline.getProcessRule().apply(standard)).isEqualTo(LocalDateTime.of(2024, 3, 4, 9, 0));
+        assertThat(deadline.getProcessRule().apply(priority)).isEqualTo(LocalDateTime.of(2024, 3, 2, 9, 0).toInstant(ZoneOffset.UTC));
+        assertThat(deadline.getProcessRule().apply(standard)).isEqualTo(LocalDateTime.of(2024, 3, 4, 9, 0).toInstant(ZoneOffset.UTC));
     }
 }
