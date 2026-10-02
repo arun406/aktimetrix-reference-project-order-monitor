@@ -11,7 +11,6 @@ spring:
 aktimetrix:
   events:
     topic: order-events          # where the shop publishes its business events
-  time-zone: UTC                 # zone of the planned and actual times
   alarms:
     check-interval: PT5S         # how often to fire the alarms due at step and process deadlines (ISO-8601)
 

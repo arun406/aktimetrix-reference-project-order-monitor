@@ -194,7 +194,7 @@ Definitions.tenant("AA")
                 .startsOn("ORDER_CREATED_EVENT")
                 .step("PAY", step -> step.on("PAYMENT_CONFIRMED_EVENT").within("PT15M").tolerance("PT5M"))
                 .step("DELIVERED", step -> step.on("ORDER_DELIVERED_EVENT")
-                        .planTime(s -> metadataTime(s, "createdAt").plusHours(4))))
+                        .planTime(s -> metadataTime(s, "createdAt").plus(Duration.ofHours(4)))))
         .build();
 ```
 
